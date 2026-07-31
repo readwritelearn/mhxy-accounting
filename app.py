@@ -241,55 +241,94 @@ def index():
 # ---------- 汇总 ----------
 @app.route("/api/summary")
 def get_summary():
-    """获取当日和当月的收入、利润汇总"""
-    today = date.today().isoformat()
-    month_start = date.today().replace(day=1).isoformat()
+    """获取当日和当月的收入、利润汇总。
+       可选参数 ?month=YYYY-MM，不传则默认当前月份。
+       如果当前月份无数据，自动回退到最近有数据的月份。
+    """
+    req_month = request.args.get("month", "").strip()
 
-    # 所有销售
+    # 所有数据
     all_sales = db.get_sales()
-    # 每日成本
     all_costs = db.get_daily_costs()
-    # 金币余额（灵活收入）
     all_balances = db.get_gold_balances()
+
+    # 收集所有有数据的月份
+    def month_of(d): return str(d)[:7] if d else ""
+    data_months = set()
+    for s in all_sales: data_months.add(month_of(s.get("date")))
+    for c in all_costs: data_months.add(month_of(c.get("date")))
+    for b in all_balances: data_months.add(month_of(b.get("date")))
+    data_months.discard("")
+    data_months = sorted(data_months, reverse=True)
+
+    current_month = date.today().strftime("%Y-%m")
+    today = date.today().isoformat()
+
+    # 确定使用的月份
+    if req_month:
+        use_month = req_month
+    else:
+        # 默认：当前月有数据用当前月，否则用最近有数据的月
+        if data_months and current_month not in data_months:
+            use_month = data_months[0]
+        else:
+            use_month = current_month
+
+    # 计算该月的日期范围
+    month_start = use_month + "-01"
+    # month_end: 如果是当前月，截至今天；否则截至该月最后一天
+    if use_month == current_month:
+        month_end = today
+    else:
+        y, m = int(use_month[:4]), int(use_month[5:7])
+        if m == 12:
+            month_end = f"{y+1}-01-01"
+        else:
+            month_end = f"{y}-{m+1:02d}-01"
+        month_end_dt = date(int(month_end[:4]), int(month_end[5:7]), 1) - timedelta(days=1)
+        month_end = month_end_dt.isoformat()
 
     # --- 当日 ---
     today_sales = [s for s in all_sales if str(s.get("date", ""))[:10] == today]
     today_sales_revenue = sum(s["revenue"] for s in today_sales)
     today_sales_profit = sum(s["profit"] for s in today_sales)
-
     today_costs = [c for c in all_costs if str(c.get("date", ""))[:10] == today]
     today_time_cost = sum(c["total_cost"] for c in today_costs)
-
     today_flexible = [b for b in all_balances if str(b.get("date", ""))[:10] == today]
     today_flexible_income = sum(b["flexible_income"] for b in today_flexible)
-
     today_revenue = round(today_sales_revenue + today_flexible_income, 2)
     today_profit = round(today_sales_profit + today_flexible_income - today_time_cost, 2)
 
-    # --- 本月 ---
+    # --- 选定月份 ---
     month_sales = [s for s in all_sales
                    if str(s.get("date", ""))[:10] >= month_start
-                   and str(s.get("date", ""))[:10] <= today]
+                   and str(s.get("date", ""))[:10] <= month_end]
     month_sales_revenue = sum(s["revenue"] for s in month_sales)
     month_sales_profit = sum(s["profit"] for s in month_sales)
 
     month_costs = [c for c in all_costs
                    if str(c.get("date", ""))[:10] >= month_start
-                   and str(c.get("date", ""))[:10] <= today]
+                   and str(c.get("date", ""))[:10] <= month_end]
     month_time_cost = sum(c["total_cost"] for c in month_costs)
 
     month_flexible = [b for b in all_balances
                       if str(b.get("date", ""))[:10] >= month_start
-                      and str(b.get("date", ""))[:10] <= today]
+                      and str(b.get("date", ""))[:10] <= month_end]
     month_flexible_income = sum(b["flexible_income"] for b in month_flexible)
 
     month_revenue = round(month_sales_revenue + month_flexible_income, 2)
     month_profit = round(month_sales_profit + month_flexible_income - month_time_cost, 2)
 
-    # --- 本月每日趋势 ---
+    # --- 当月每日趋势（始终显示选定月份的每天） ---
     days_in_month = []
-    d = date.today().replace(day=1)
-    while d <= date.today():
+    y, m = int(use_month[:4]), int(use_month[5:7])
+    d = date(y, m, 1)
+    if m == 12:
+        next_month = date(y+1, 1, 1)
+    else:
+        next_month = date(y, m+1, 1)
+    end_d = min(date.today(), next_month - timedelta(days=1))
+    while d <= end_d:
         d_str = d.isoformat()
         d_sales = [s for s in all_sales if str(s.get("date", ""))[:10] == d_str]
         d_costs = [c for c in all_costs if str(c.get("date", ""))[:10] == d_str]
@@ -315,7 +354,7 @@ def get_summary():
             "flexible_income": today_flexible_income,
         },
         "month": {
-            "month": today[:7],
+            "month": use_month,
             "revenue": month_revenue,
             "profit": month_profit,
             "sales_revenue": month_sales_revenue,
@@ -324,6 +363,7 @@ def get_summary():
             "flexible_income": month_flexible_income,
         },
         "daily_trend": days_in_month,
+        "available_months": data_months,
     })
 
 
