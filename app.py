@@ -62,7 +62,8 @@ class ExcelDB:
         # daily_time (每日在线时间)
         ws = wb.create_sheet("daily_time")
         ws.append(["id", "date", "login_time", "logout_time", "hours",
-                    "points_per_hour", "currency_per_point", "total_cost", "note", "created_at"])
+                    "points_per_hour", "currency_per_point", "account_count",
+                    "total_cost", "note", "created_at"])
         wb.save(self.filepath)
 
     # ---------- 通用 ----------
@@ -442,9 +443,10 @@ class ExcelDB:
             result.append(r)
         return result
 
-    def add_daily_time(self, t_date, login_time, logout_time, note=""):
+    def add_daily_time(self, t_date, login_time, logout_time, account_count=1, note=""):
         """记录每日在线时间，自动计算点卡成本。
-           login_time/logout_time: 'HH:MM' 格式 """
+           login_time/logout_time: 'HH:MM' 格式
+           account_count: 多开数量，成本倍增 """
         tid = self._next_id("daily_time")
         # 计算小时
         def to_hours(t):
@@ -458,18 +460,19 @@ class ExcelDB:
         cfg = self.get_config()
         pph = float(cfg.get("points_per_hour", 6))
         cpp = float(cfg.get("currency_per_point", 14000))
-        total_cost = round(hours * pph * cpp, 0)
+        total_cost = round(hours * pph * cpp * account_count, 0)
 
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self._append_row("daily_time", [
             tid, t_date, login_time, logout_time, hours,
-            pph, cpp, total_cost, note, now
+            pph, cpp, account_count, total_cost, note, now
         ])
 
         # 生成点卡费用交易
+        ac_info = f" ({account_count}开)" if account_count > 1 else ""
         self.add_transaction(
             t_date, "expense", "point_card",
-            f"点卡: {login_time}-{logout_time} ({hours}h × {pph}点/h × {cpp:,.0f}/点)",
+            f"点卡: {login_time}-{logout_time} ({hours}h × {pph}点/h × {cpp:,.0f}/点{ac_info})",
             -total_cost
         )
         return tid, hours, total_cost
@@ -774,12 +777,15 @@ def api_pointcard():
     login_time = d.get("login_time", "").strip()
     logout_time = d.get("logout_time", "").strip()
     note = d.get("note", "").strip()
+    account_count = _int(d.get("account_count"), 1)
 
     if not login_time or not logout_time:
         return jsonify({"error": "请填写上线和下线时间"}), 400
+    if account_count < 1:
+        account_count = 1
 
     try:
-        tid, hours, total_cost = db.add_daily_time(t_date, login_time, logout_time, note)
+        tid, hours, total_cost = db.add_daily_time(t_date, login_time, logout_time, account_count, note)
     except Exception as e:
         return jsonify({"error": f"时间格式错误: {e}"}), 400
 
