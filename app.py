@@ -30,44 +30,62 @@ class ExcelDB:
         self.filepath = filepath
         self._ensure_file()
 
+    # 所有表及其列定义（用于自动创建和迁移）
+    SHEETS = {
+        "config": ["key", "value"],
+        "inventory": ["id", "name", "quantity", "avg_cost", "total_cost",
+                       "market_price", "last_sell_price", "status", "created_at"],
+        "pre_receipt_batches": ["id", "batch_name", "total_amount", "allocated_amount",
+                                 "status", "note", "created_at"],
+        "pre_receipt_items": ["id", "batch_id", "name", "quantity", "unit_cost",
+                               "total_cost", "created_at"],
+        "transactions": ["id", "date", "type", "category", "description",
+                          "amount", "balance_after", "profit", "ref_id", "created_at"],
+        "daily_time": ["id", "date", "login_time", "logout_time", "hours",
+                        "points_per_hour", "currency_per_point", "account_count",
+                        "total_cost", "note", "created_at"],
+        "currency_prices": ["id", "date", "time", "price", "note", "created_at"],
+    }
+
     def _ensure_file(self):
         os.makedirs(os.path.dirname(self.filepath), exist_ok=True)
-        if os.path.exists(self.filepath):
-            return
-        wb = Workbook()
-        # config
-        ws = wb.active
-        ws.title = "config"
-        ws.append(["key", "value"])
-        ws.append(["currency_ratio", "100000"])      # 现金折算比: 1元 = 10万游戏币
-        ws.append(["initial_balance", "0"])
-        ws.append(["points_per_hour", "6"])          # 每小时消耗点数
-        ws.append(["currency_per_point", "14000"])   # 每点折算游戏币
-        # inventory
-        ws = wb.create_sheet("inventory")
-        ws.append(["id", "name", "quantity", "avg_cost", "total_cost",
-                    "market_price", "last_sell_price", "status", "created_at"])
-        # pre_receipt_batches
-        ws = wb.create_sheet("pre_receipt_batches")
-        ws.append(["id", "batch_name", "total_amount", "allocated_amount",
-                    "status", "note", "created_at"])
-        # pre_receipt_items
-        ws = wb.create_sheet("pre_receipt_items")
-        ws.append(["id", "batch_id", "name", "quantity", "unit_cost",
-                    "total_cost", "created_at"])
-        # transactions (总账)
-        ws = wb.create_sheet("transactions")
-        ws.append(["id", "date", "type", "category", "description",
-                    "amount", "balance_after", "profit", "ref_id", "created_at"])
-        # daily_time (每日在线时间)
-        ws = wb.create_sheet("daily_time")
-        ws.append(["id", "date", "login_time", "logout_time", "hours",
-                    "points_per_hour", "currency_per_point", "account_count",
-                    "total_cost", "note", "created_at"])
-        # currency_prices (币价记录)
-        ws = wb.create_sheet("currency_prices")
-        ws.append(["id", "date", "time", "price", "note", "created_at"])
-        wb.save(self.filepath)
+        if not os.path.exists(self.filepath):
+            # 全新创建
+            wb = Workbook()
+            first = True
+            for name, headers in self.SHEETS.items():
+                if first:
+                    ws = wb.active
+                    ws.title = name
+                    first = False
+                else:
+                    ws = wb.create_sheet(name)
+                ws.append(headers)
+            wb.save(self.filepath)
+        else:
+            # 自动迁移：补上缺失的 sheet
+            wb = load_workbook(self.filepath)
+            existing = wb.sheetnames
+            for name, headers in self.SHEETS.items():
+                if name not in existing:
+                    ws = wb.create_sheet(name)
+                    ws.append(headers)
+            wb.save(self.filepath)
+            wb.close()
+        # 确保 config 中有默认值
+        self._ensure_config_defaults()
+
+    def _ensure_config_defaults(self):
+        cfg = self.get_config()
+        defaults = {
+            "currency_ratio": "100000",
+            "initial_balance": "0",
+            "points_per_hour": "6",
+            "currency_per_point": "14000",
+        }
+        for k, v in defaults.items():
+            if k not in cfg:
+                self.set_config(k, v)
 
     # ---------- 通用 ----------
     def _read_all(self, sheet_name):
