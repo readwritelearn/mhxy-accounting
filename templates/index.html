@@ -358,6 +358,7 @@ $('#plTable').innerHTML=`<table class="table table-sm"><tbody>
 <tr style="border-top:2px solid #ddd"><td><strong>总收入</strong></td><td class="text-end"><strong>${fm(d.profit.total_income)}</strong></td></tr>
 <tr><td style="color:#e74c3c">💳 点卡费用</td><td class="text-end" style="color:#e74c3c">-${fm(d.profit.point_card_expense)}</td></tr>
 <tr style="border-top:2px solid #ddd;font-size:1rem"><td><strong>💰 净利润</strong></td><td class="text-end"><strong style="color:${d.profit.net_profit>=0?'var(--green)':'#e74c3c'}">${fm(d.profit.net_profit)}</strong></td></tr>
+<tr><td style="color:#8e44ad">💱 实时获利 (RMB)</td><td class="text-end" style="color:#8e44ad"><strong>¥${d.profit.rmb_profit.toFixed(2)}</strong> <span style="font-size:.7rem;color:#aaa">(@${d.profit.price_per_wan.toFixed(4)}元/万)</span></td></tr>
 </tbody></table>`;
 
 // Month selector
@@ -611,8 +612,8 @@ fetch('/api/currency-price').then(r=>r.json()).then(function(prices){
 var tbl=document.getElementById('priceTable');if(!tbl)return;
 if(!prices.length){tbl.innerHTML='<div class="empty-state">暂无币价记录</div>';return}
 prices.reverse();
-var h='<table class="table table-sm"><thead><tr><th>日期</th><th>时间</th><th>3000万=?元</th><th>备注</th></tr></thead><tbody>';
-prices.slice(0,30).forEach(function(p){h+='<tr><td>'+p.date+'</td><td>'+p.time+'</td><td>'+p.price+'元</td><td>'+(p.note||'-')+'</td></tr>'});
+var h='<table class="table table-sm"><thead><tr><th>日期</th><th>时间</th><th>3000万=?元</th><th>每万两单价</th><th>备注</th></tr></thead><tbody>';
+prices.slice(0,30).forEach(function(p){var ppw=(p.price/3000).toFixed(4);h+='<tr><td>'+p.date+'</td><td>'+p.time+'</td><td>'+p.price+'元</td><td>'+ppw+'元/万</td><td>'+(p.note||'-')+'</td></tr>'});
 h+='</tbody></table>';tbl.innerHTML=h;
 }).catch(function(){var tbl=document.getElementById('priceTable');if(tbl)tbl.innerHTML='<div class="empty-state">加载失败</div>'});
 
@@ -625,7 +626,9 @@ window.priceChart=new Chart(ctx,{type:'line',data:{labels:trend.map(function(x){
 {label:'均价(元/3000万)',data:trend.map(function(x){return x.avg_price}),borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
 {label:'最低',data:trend.map(function(x){return x.min_price}),borderColor:'#3498db',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
 {label:'最高',data:trend.map(function(x){return x.max_price}),borderColor:'#e74c3c',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
-]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:function(v){return v+'元'}},grid:{color:'#f0f0f0'}}}}});
+{label:'每万两单价(元)',data:trend.map(function(x){return x.price_per_wan}),borderColor:'#8e44ad',backgroundColor:'rgba(142,68,173,0.05)',fill:true,tension:0.4,pointRadius:2,pointHoverRadius:4,borderWidth:2,yAxisID:'y1'},
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:function(v){return v+'元'}},grid:{color:'#f0f0f0'}},
+y1:{position:'right',ticks:{color:'#8e44ad',callback:function(v){return v.toFixed(2)+'元/万'}},grid:{display:false}}}}});
 },200);
 }).catch(function(){});
 }

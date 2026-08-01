@@ -533,14 +533,23 @@ class ExcelDB:
         result = []
         for d in sorted(daily.keys()):
             prices = daily[d]
+            avg = round(sum(prices) / len(prices), 0)
             result.append({
                 "date": d,
-                "avg_price": round(sum(prices) / len(prices), 0),
+                "avg_price": avg,
                 "min_price": min(prices),
                 "max_price": max(prices),
+                "price_per_wan": round(avg / 3000, 4),  # 每万两单价(元)
                 "count": len(prices),
             })
         return result
+
+    def get_latest_price_per_wan(self):
+        """获取最近一天的每万两单价，用于实时获利计算"""
+        trend = self.get_currency_trend()
+        if trend:
+            return trend[-1]["price_per_wan"]
+        return 0
 
     # ---------- 汇总 ----------
     def get_summary(self, month=None):
@@ -582,6 +591,10 @@ class ExcelDB:
 
         total_income = sale_profit + vitality_income + school_income + random_income
         net_profit = total_income - point_card_expense
+
+        # 实时获利(RMB) = 净利润 / 每万两单价
+        price_per_wan = db.get_latest_price_per_wan()
+        rmb_profit = round(net_profit / price_per_wan, 2) if price_per_wan > 0 else 0
 
         # 每日趋势
         daily = []
@@ -628,6 +641,8 @@ class ExcelDB:
                 "total_income": total_income,
                 "point_card_expense": point_card_expense,
                 "net_profit": net_profit,
+                "price_per_wan": price_per_wan,
+                "rmb_profit": rmb_profit,
             },
             "daily_trend": daily,
             "available_months": months_set,
