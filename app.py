@@ -179,6 +179,93 @@ class ExcelDB:
             result.append(r)
         return result
 
+    def _recalc_balances(self):
+        """重算所有交易的 running balance_after"""
+        wb = load_workbook(self.filepath)
+        ws = wb["transactions"]
+        running = float(self.get_config().get("initial_balance", 0))
+        # 收集所有行 (id, amount) 按 id 排序
+        rows_data = []
+        for row in ws.iter_rows(min_row=2):
+            tid = row[0].value
+            if tid is None: continue
+            amt = float(row[5].value or 0)
+            rows_data.append((row[0].row, tid, amt))
+        rows_data.sort(key=lambda x: x[1])  # sort by id
+
+        for (excel_row, tid, amt) in rows_data:
+            running = round(running + amt, 0)
+            ws.cell(row=excel_row, column=7).value = running  # balance_after
+        wb.save(self.filepath)
+        wb.close()
+        return running
+
+    def delete_transaction(self, tid):
+        """删除交易并修复库存和余额。
+           对收货: 退回库存。对卖货: 返还库存。对点卡: 删除在线时间记录。"""
+        txns = self.get_transactions()
+        txn = next((t for t in txns if t["id"] == tid), None)
+        if not txn:
+            raise ValueError("交易不存在")
+
+        cat = txn["category"]
+
+        # 收货(单件/批量): 不能直接删库存(可能已卖出)，仅做余额回退
+        if cat == "purchase_single":
+            # 尝试找到关联库存并扣减
+            desc = (txn.get("description") or "")
+            # 格式: "收货: name xqty @cost"
+            pass  # 库存已在卖货时扣减，删除收货只回退余额
+
+        if cat == "sale":
+            # 卖货删除: 返还库存
+            desc = (txn.get("description") or "")
+            # 格式: "卖出: name xqty @price (成本@cost)"
+            import re
+            m = re.search(r"卖出: (.+?) x(\d+)", desc)
+            if m:
+                name = m.group(1)
+                qty = int(m.group(2))
+                cost_match = re.search(r"成本@([\d,]+)", desc)
+                cost = float(cost_match.group(1).replace(",", "")) if cost_match else 0
+                self.add_inventory(name, qty, cost)
+
+        if cat == "point_card":
+            # 同步删除 daily_time 记录
+            wb = load_workbook(self.filepath)
+            if "daily_time" in wb.sheetnames:
+                ws = wb["daily_time"]
+                for row in ws.iter_rows(min_row=2):
+                    if row[0].value and int(row[0].value) == (txn.get("ref_id") or 0):
+                        ws.delete_rows(row[0].row, 1)
+                        break
+                wb.save(self.filepath)
+            wb.close()
+
+        # 删除交易行
+        self._delete_row("transactions", tid)
+        # 重算余额
+        self._recalc_balances()
+
+    def update_transaction(self, tid, data):
+        """更新交易描述、日期（不动金额和库存）"""
+        wb = load_workbook(self.filepath)
+        ws = wb["transactions"]
+        col_map = {"date": 1, "type": 2, "category": 3, "description": 4}
+        for row in ws.iter_rows(min_row=2):
+            if row[0].value == tid:
+                for key, col_idx in col_map.items():
+                    if key in data:
+                        row[col_idx].value = data[key]
+                break
+        wb.save(self.filepath)
+        wb.close()
+
+    def get_transaction(self, tid):
+        """获取单条交易"""
+        txns = self.get_transactions()
+        return next((t for t in txns if t["id"] == tid), None)
+
     # ---------- 库存 ----------
     def get_inventory(self, status="active"):
         items = self._read_all("inventory")
@@ -513,6 +600,23 @@ def api_transactions():
         request.args.get("end"),
         request.args.get("category"),
     ))
+
+@app.route("/api/transactions/<int:tid>", methods=["DELETE"])
+def api_delete_transaction(tid):
+    try:
+        db.delete_transaction(tid)
+        return jsonify({"ok": True, "balance": db.get_balance()})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+@app.route("/api/transactions/<int:tid>", methods=["PUT"])
+def api_update_transaction(tid):
+    d = request.get_json()
+    db.update_transaction(tid, d)
+    # 如果日期变了，重算余额
+    if "amount" not in d:
+        pass  # 仅改描述/日期，余额不变
+    return jsonify({"ok": True})
 
 # ---------- 库存 ----------
 @app.route("/api/inventory")

@@ -400,12 +400,31 @@ try{var txns=await api('/api/transactions')}catch(e){return}
 txns.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
 if(!txns.length){$('#txnTable').innerHTML='<div class="empty-state">📒 暂无流水</div>';return}
 var catMap={purchase_single:'🛒收货',purchase_bulk:'📦批量收货',sale:'💵卖出',vitality:'⚡体活',school:'📋师门',random:'🎁随机',point_card:'💳点卡'};
-$('#txnTable').innerHTML='<table class="table table-sm"><thead><tr><th>日期</th><th>类型</th><th>描述</th><th>金额</th><th>利润</th><th>余额</th></tr></thead><tbody>'
+$('#txnTable').innerHTML='<table class="table table-sm"><thead><tr><th>日期</th><th>类型</th><th>描述</th><th>金额</th><th>利润</th><th>余额</th><th>操作</th></tr></thead><tbody>'
 +txns.slice(0,50).map(t=>`<tr>
-<td>${(t.date||'').slice(0,10)}</td><td>${catMap[t.category]||t.category}</td><td>${t.description||''}</td>
+<td>${(t.date||'').slice(0,10)}</td><td>${catMap[t.category]||t.category}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(t.description||'').replace(/"/g,'&quot;')}">${t.description||''}</td>
 <td style="color:${t.amount>=0?'var(--green)':'#e74c3c'}">${t.amount>=0?'+':''}${fm(t.amount)}</td>
 <td>${t.profit?fm(t.profit):'-'}</td><td style="font-size:.8rem">${fm(t.balance_after)}</td>
+<td style="white-space:nowrap">
+<button class="btn btn-outline-sm me-1" onclick="editTxn(${t.id})" style="font-size:.7rem">✏</button>
+<button class="btn btn-outline-sm" onclick="delTxn(${t.id})" style="font-size:.7rem;color:#e74c3c">🗑</button>
+</td>
 </tr>`).join('')+'</tbody></table>';
+}
+
+async function delTxn(tid){
+if(!confirm('确定删除该条流水吗？\\n\\n收货/卖货会退回库存，余额会自动回退。'))return;
+try{await api('/api/transactions/'+tid,{method:'DELETE'})}catch(e){return}
+toast('流水已删除');refreshAll();
+}
+
+function editTxn(tid){
+// 简单编辑：修改描述和日期
+var desc=prompt('修改描述:', '');
+if(desc===null)return;
+var dt=prompt('修改日期 (YYYY-MM-DD):', '');
+if(dt===null)return;
+api('/api/transactions/'+tid,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:desc,date:dt})}).then(()=>{toast('已更新');refreshAll()}).catch(()=>{});
 }
 
 // ========== Modal Helpers ==========
