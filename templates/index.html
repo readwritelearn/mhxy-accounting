@@ -95,7 +95,6 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <div class="action-btn income" onclick="openModal('income','school')"><span class="icon">📋</span>师门收入</div>
 <div class="action-btn income" onclick="openModal('income','random')"><span class="icon">🎁</span>随机物品</div>
 <div class="action-btn expense" onclick="openModal('pointcard')"><span class="icon">💳</span>点卡费用</div>
-<div class="action-btn special" onclick="openModal('initBalance')"><span class="icon">🔧</span>初始化余额</div>
 </div>
 
 <!-- Tabs -->
@@ -294,20 +293,6 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 </div>
 </div></div></div>
 
-<!-- 初始化余额 -->
-<div class="modal fade" id="modal-initBalance" tabindex="-1">
-<div class="modal-dialog modal-sm"><div class="modal-content">
-<div class="modal-header"><h6 class="modal-title">🔧 设置游戏币余额</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
-<div class="modal-body">
-<div class="mb-2"><label class="form-label">当前游戏币余额</label><input type="number" class="form-control" id="ibAmount" placeholder="游戏币" step="1"></div>
-<div style="font-size:.75rem;color:var(--muted)">当前余额: <strong id="ibCurrent">0</strong></div>
-</div>
-<div class="modal-footer">
-<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
-<button class="btn btn-gold" onclick="doInitBalance()">设置</button>
-</div>
-</div></div></div>
-
 <!-- 批量拆分 -->
 <div class="modal fade" id="modal-split" tabindex="-1">
 <div class="modal-dialog modal-lg"><div class="modal-content">
@@ -470,7 +455,6 @@ if(type==='purchaseBulk'){m=document.getElementById('modal-purchaseBulk');bs=new
 if(type==='sell'){m=document.getElementById('modal-sell');bs=new bootstrap.Modal(m);initDates();$('#slDetail').style.display='none';loadInventoryForSell();}
 if(type==='income'){incomeCat=cat;m=document.getElementById('modal-income');bs=new bootstrap.Modal(m);initDates();$('#inAmount').value='';$('#inBefore').value='';$('#inAfter').value='';$('#inDesc').value='';$('#inSchoolPreview').style.display='none';var titles={vitality:'⚡ 体力活力收入',school:'📋 师门收入',random:'🎁 随机物品收入'};$('#incomeTitle').textContent=titles[cat]||'收入';if(cat==='school'){$('#inGeneric').style.display='none';$('#inSchool').style.display=''}else{$('#inGeneric').style.display='';$('#inSchool').style.display='none'}}
 if(type==='pointcard'){m=document.getElementById('modal-pointcard');bs=new bootstrap.Modal(m);var now=new Date();$('#pcStart').value=now.toISOString().slice(0,16);var later=new Date(now.getTime()+4*3600000);$('#pcEnd').value=later.toISOString().slice(0,16);$('#pcDesc').value='';$('#pcAccounts').value='1';$('#pcPreview').style.display='none';}
-if(type==='initBalance'){m=document.getElementById('modal-initBalance');bs=new bootstrap.Modal(m);$('#ibCurrent').textContent=$('#astBalance').textContent;$('#ibAmount').value='';}
 bs.show();
 }
 
@@ -572,14 +556,6 @@ $('#pcEnd').addEventListener('change',updatePcPreview);
 $('#pcAccounts').addEventListener('change',updatePcPreview);
 $('#inBefore').addEventListener('input',function(){var b=parseFloat(this.value)||0,a=parseFloat($('#inAfter').value)||0;var d=a-b;$('#inSchoolDiff').textContent=fm(d);$('#inSchoolDiff').style.color=d>0?'var(--green)':'#e74c3c';$('#inSchoolPreview').style.display=(this.value||$('#inAfter').value)?'block':'none'});
 $('#inAfter').addEventListener('input',function(){var b=parseFloat($('#inBefore').value)||0,a=parseFloat(this.value)||0;var d=a-b;$('#inSchoolDiff').textContent=fm(d);$('#inSchoolDiff').style.color=d>0?'var(--green)':'#e74c3c';$('#inSchoolPreview').style.display=(this.value||$('#inBefore').value)?'block':'none'});
-
-async function doInitBalance(){
-var amount=parseFloat($('#ibAmount').value);
-if(isNaN(amount)||amount<0)return toast('请输入有效金额','error');
-try{await api('/api/balance/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amount})})}catch(e){return}
-toast('🔧 余额已设置');bootstrap.Modal.getInstance(document.getElementById('modal-initBalance')).hide();
-refreshAll();
-}
 
 // ========== Pool Split ==========
 var splitBatchId=null;
