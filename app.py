@@ -592,9 +592,9 @@ class ExcelDB:
         total_income = sale_profit + vitality_income + school_income + random_income
         net_profit = total_income - point_card_expense
 
-        # 实时获利(RMB) = 净利润 / 每万两单价
+        # 实时获利(RMB) = 净利润(万) × 每万两单价(元/万)
         price_per_wan = db.get_latest_price_per_wan()
-        rmb_profit = round(net_profit / price_per_wan, 2) if price_per_wan > 0 else 0
+        rmb_profit = round(net_profit / 10000 * price_per_wan, 2) if price_per_wan > 0 else 0
 
         # 每日趋势
         daily = []
