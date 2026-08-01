@@ -39,8 +39,10 @@ class ExcelDB:
         ws = wb.active
         ws.title = "config"
         ws.append(["key", "value"])
-        ws.append(["currency_ratio", "100000"])   # 默认: 100万游戏币 = 10元 = 10万/元
+        ws.append(["currency_ratio", "100000"])      # 现金折算比: 1元 = 10万游戏币
         ws.append(["initial_balance", "0"])
+        ws.append(["points_per_hour", "6"])          # 每小时消耗点数
+        ws.append(["currency_per_point", "14000"])   # 每点折算游戏币
         # inventory
         ws = wb.create_sheet("inventory")
         ws.append(["id", "name", "quantity", "avg_cost", "total_cost",
@@ -57,6 +59,10 @@ class ExcelDB:
         ws = wb.create_sheet("transactions")
         ws.append(["id", "date", "type", "category", "description",
                     "amount", "balance_after", "profit", "ref_id", "created_at"])
+        # daily_time (每日在线时间)
+        ws = wb.create_sheet("daily_time")
+        ws.append(["id", "date", "login_time", "logout_time", "hours",
+                    "points_per_hour", "currency_per_point", "total_cost", "note", "created_at"])
         wb.save(self.filepath)
 
     # ---------- 通用 ----------
@@ -335,6 +341,52 @@ class ExcelDB:
             self._delete_row("pre_receipt_items", item["id"])
         self._delete_row("pre_receipt_batches", batch_id)
 
+    # ---------- 每日在线时间 ----------
+    def get_daily_times(self, start_date=None, end_date=None):
+        rows = self._read_all("daily_time")
+        result = []
+        for r in rows:
+            d = str(r.get("date", ""))[:10]
+            if start_date and d < start_date: continue
+            if end_date and d > end_date: continue
+            r["id"] = int(r["id"] or 0)
+            r["hours"] = float(r["hours"] or 0)
+            r["total_cost"] = float(r["total_cost"] or 0)
+            result.append(r)
+        return result
+
+    def add_daily_time(self, t_date, login_time, logout_time, note=""):
+        """记录每日在线时间，自动计算点卡成本。
+           login_time/logout_time: 'HH:MM' 格式 """
+        tid = self._next_id("daily_time")
+        # 计算小时
+        def to_hours(t):
+            parts = t.strip().split(":")
+            return int(parts[0]) + int(parts[1]) / 60.0
+        hours = to_hours(logout_time) - to_hours(login_time)
+        if hours < 0:
+            hours += 24  # 跨天
+        hours = round(hours, 2)
+
+        cfg = self.get_config()
+        pph = float(cfg.get("points_per_hour", 6))
+        cpp = float(cfg.get("currency_per_point", 14000))
+        total_cost = round(hours * pph * cpp, 0)
+
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._append_row("daily_time", [
+            tid, t_date, login_time, logout_time, hours,
+            pph, cpp, total_cost, note, now
+        ])
+
+        # 生成点卡费用交易
+        self.add_transaction(
+            t_date, "expense", "point_card",
+            f"点卡: {login_time}-{logout_time} ({hours}h × {pph}点/h × {cpp:,.0f}/点)",
+            -total_cost
+        )
+        return tid, hours, total_cost
+
     # ---------- 汇总 ----------
     def get_summary(self, month=None):
         """资产总览 + 利润表"""
@@ -610,22 +662,35 @@ def api_income():
     )
     return jsonify({"ok": True, "balance": bal, "transaction_id": tid})
 
-# ---------- 点卡 ----------
+# ---------- 点卡（按在线时间自动计算） ----------
 @app.route("/api/pointcard", methods=["POST"])
 def api_pointcard():
     d = request.get_json()
-    amount = _float(d.get("amount"))
-    desc = d.get("description", "").strip()
-    if amount <= 0:
-        return jsonify({"error": "金额必须大于0"}), 400
+    t_date = d.get("date", date.today().isoformat())
+    login_time = d.get("login_time", "").strip()
+    logout_time = d.get("logout_time", "").strip()
+    note = d.get("note", "").strip()
 
-    tid, bal = db.add_transaction(
-        d.get("date", date.today().isoformat()),
-        "expense", "point_card",
-        desc or "点卡费用",
-        -amount
-    )
-    return jsonify({"ok": True, "balance": bal, "transaction_id": tid})
+    if not login_time or not logout_time:
+        return jsonify({"error": "请填写上线和下线时间"}), 400
+
+    try:
+        tid, hours, total_cost = db.add_daily_time(t_date, login_time, logout_time, note)
+    except Exception as e:
+        return jsonify({"error": f"时间格式错误: {e}"}), 400
+
+    bal = db.get_balance()
+    return jsonify({
+        "ok": True, "balance": bal, "hours": hours, "total_cost": total_cost,
+        "transaction_id": tid
+    })
+
+@app.route("/api/daily-time")
+def api_daily_time():
+    return jsonify(db.get_daily_times(
+        request.args.get("start"),
+        request.args.get("end"),
+    ))
 
 # ---------- 初始化余额 ----------
 @app.route("/api/balance/init", methods=["POST"])

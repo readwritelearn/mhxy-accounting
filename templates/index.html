@@ -240,16 +240,23 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <!-- 点卡 -->
 <div class="modal fade" id="modal-pointcard" tabindex="-1">
 <div class="modal-dialog modal-sm"><div class="modal-content">
-<div class="modal-header"><h6 class="modal-title">💳 点卡费用</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-header"><h6 class="modal-title">💳 点卡计时</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
 <div class="modal-body">
 <div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="pcDate"></div>
-<div class="mb-2"><label class="form-label">游戏币金额</label><input type="number" class="form-control" id="pcAmount" placeholder="游戏币" step="1"></div>
-<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="pcDesc" placeholder="如：月卡"></div>
-<div style="font-size:.75rem;color:var(--muted)">💡 现金折算: <span id="pcRmbHint">-</span></div>
+<div class="row g-2">
+<div class="col-6"><label class="form-label">上线时间</label><input type="time" class="form-control" id="pcLogin"></div>
+<div class="col-6"><label class="form-label">下线时间</label><input type="time" class="form-control" id="pcLogout"></div>
+</div>
+<div class="mb-2 mt-2"><label class="form-label">备注</label><input type="text" class="form-control" id="pcDesc" placeholder="如：上午抓鬼副本"></div>
+<div class="auto-calc" id="pcPreview" style="display:none;margin-top:8px">
+⏱ 在线: <strong id="pcHours">0</strong> 小时 &nbsp;|&nbsp;
+📐 <strong id="pcPoints">0</strong> 点 × <strong id="pcRate">1.4万</strong>/点 &nbsp;|&nbsp;
+💰 成本: <strong id="pcCost">0</strong>
+</div>
 </div>
 <div class="modal-footer">
 <button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
-<button class="btn btn-red" onclick="doPointcard()">确认</button>
+<button class="btn btn-red" onclick="doPointcard()">确认扣费</button>
 </div>
 </div></div></div>
 
@@ -409,7 +416,7 @@ if(type==='purchaseSingle'){m=document.getElementById('modal-purchaseSingle');bs
 if(type==='purchaseBulk'){m=document.getElementById('modal-purchaseBulk');bs=new bootstrap.Modal(m);initDates();$('#pbName').value='';$('#pbAmount').value='';$('#pbNote').value='';}
 if(type==='sell'){m=document.getElementById('modal-sell');bs=new bootstrap.Modal(m);initDates();$('#slDetail').style.display='none';loadInventoryForSell();}
 if(type==='income'){incomeCat=cat;m=document.getElementById('modal-income');bs=new bootstrap.Modal(m);initDates();$('#inAmount').value='';$('#inDesc').value='';var titles={vitality:'⚡ 体力活力收入',school:'📋 师门收入',random:'🎁 随机物品收入'};$('#incomeTitle').textContent=titles[cat]||'收入';}
-if(type==='pointcard'){m=document.getElementById('modal-pointcard');bs=new bootstrap.Modal(m);initDates();$('#pcAmount').value='';$('#pcDesc').value='';loadPcHint();}
+if(type==='pointcard'){m=document.getElementById('modal-pointcard');bs=new bootstrap.Modal(m);initDates();$('#pcLogin').value='';$('#pcLogout').value='';$('#pcDesc').value='';$('#pcPreview').style.display='none';}
 if(type==='initBalance'){m=document.getElementById('modal-initBalance');bs=new bootstrap.Modal(m);$('#ibCurrent').textContent=$('#astBalance').textContent;$('#ibAmount').value='';}
 bs.show();
 }
@@ -437,12 +444,6 @@ var sel=$('#slItem');var opt=sel.options[sel.selectedIndex];
 var c=parseFloat(opt?.dataset?.cost)||0;
 $('#slProfit').textContent=fm((p-c)*q);
 }
-
-async function loadPcHint(){
-try{var cfg=await api('/api/config')}catch(e){return}
-var ratio=parseFloat(cfg.currency_ratio||100000);
-$('#pcRmbHint').textContent='1元 ≈ '+fm(ratio)+' 游戏币';
-$('#pcAmount').addEventListener('input',function(){var v=parseFloat(this.value)||0;$('#pcRmbHint').textContent='≈ '+(v/ratio).toFixed(2)+' 元'});}
 
 // ========== Actions ==========
 async function doPurchaseSingle(){
@@ -481,12 +482,30 @@ refreshAll();
 }
 
 async function doPointcard(){
-var amount=parseFloat($('#pcAmount').value);
-if(!amount)return toast('请填写金额','error');
-try{await api('/api/pointcard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#pcDate').value,amount:amount,description:$('#pcDesc').value})})}catch(e){return}
-toast('💳 点卡费用已记录');bootstrap.Modal.getInstance(document.getElementById('modal-pointcard')).hide();
+var login=$('#pcLogin').value;var logout=$('#pcLogout').value;
+if(!login||!logout)return toast('请填写上下线时间','error');
+try{var r=await api('/api/pointcard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#pcDate').value,login_time:login,logout_time:logout,note:$('#pcDesc').value})})}catch(e){return}
+toast('💳 在线 '+r.hours+' 小时，点卡成本 '+fm(r.total_cost));bootstrap.Modal.getInstance(document.getElementById('modal-pointcard')).hide();
 refreshAll();
 }
+
+// 点卡时间预览
+function updatePcPreview(){
+var login=$('#pcLogin').value;var logout=$('#pcLogout').value;
+if(!login||!logout){$('#pcPreview').style.display='none';return}
+var l=login.split(':').map(Number),o=logout.split(':').map(Number);
+var h=o[0]-l[0]+(o[1]-l[1])/60;if(h<0)h+=24;
+api('/api/config').then(c=>{
+var pph=parseFloat(c.points_per_hour||6),cpp=parseFloat(c.currency_per_point||14000);
+$('#pcHours').textContent=h.toFixed(1);
+$('#pcPoints').textContent=Math.round(h*pph);
+$('#pcRate').textContent=(cpp/10000).toFixed(1)+'万';
+$('#pcCost').textContent=fm(Math.round(h*pph*cpp));
+$('#pcPreview').style.display='block';
+}).catch(()=>{});
+}
+$('#pcLogin').addEventListener('change',updatePcPreview);
+$('#pcLogout').addEventListener('change',updatePcPreview);
 
 async function doInitBalance(){
 var amount=parseFloat($('#ibAmount').value);
