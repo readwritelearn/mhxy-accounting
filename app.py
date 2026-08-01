@@ -12,6 +12,9 @@
 """
 
 import os
+import shutil
+import threading
+import time
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, jsonify
 from openpyxl import Workbook, load_workbook
@@ -19,7 +22,9 @@ from openpyxl import Workbook, load_workbook
 # ==================== 配置 ====================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
+BACKUP_DIR = os.path.join(BASE_DIR, "backups")
 DATA_FILE = os.path.join(DATA_DIR, "mhxy_data.xlsx")
+BACKUP_KEEP_DAYS = 30  # 保留最近 30 天的备份
 
 app = Flask(__name__)
 
@@ -631,6 +636,51 @@ class ExcelDB:
 db = ExcelDB(DATA_FILE)
 
 
+# ==================== 自动备份 ====================
+_last_backup_date = None  # 记录上次备份的日期，防止重复
+
+def backup_data():
+    """备份数据到 backups/ 目录，保留最近 N 天"""
+    global _last_backup_date
+    today_str = date.today().isoformat()
+    if _last_backup_date == today_str:
+        return  # 今天已经备份过了
+    if not os.path.exists(DATA_FILE):
+        return  # 还没数据，不备份
+
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    backup_name = f"mhxy_data_{today_str}.xlsx"
+    backup_path = os.path.join(BACKUP_DIR, backup_name)
+
+    try:
+        shutil.copy2(DATA_FILE, backup_path)
+        _last_backup_date = today_str
+        print(f"[备份] {datetime.now().strftime('%H:%M:%S')} → {backup_name}")
+
+        # 清理超过 30 天的旧备份
+        cutoff = date.today() - timedelta(days=BACKUP_KEEP_DAYS)
+        for fname in os.listdir(BACKUP_DIR):
+            if fname.startswith("mhxy_data_") and fname.endswith(".xlsx"):
+                try:
+                    fdate_str = fname.replace("mhxy_data_", "").replace(".xlsx", "")
+                    fdate = date.fromisoformat(fdate_str)
+                    if fdate < cutoff:
+                        os.remove(os.path.join(BACKUP_DIR, fname))
+                        print(f"[备份] 清理旧备份: {fname}")
+                except ValueError:
+                    pass
+    except Exception as e:
+        print(f"[备份] 失败: {e}")
+
+def backup_scheduler():
+    """后台线程：每分钟检查一次是否需要备份（0:00-0:01 触发）"""
+    while True:
+        now = datetime.now()
+        if now.hour == 0 and now.minute <= 1:
+            backup_data()
+        time.sleep(60)  # 每分钟检查一次
+
+
 # ==================== 辅助 ====================
 def _int(v, default=0):
     try: return int(v)
@@ -932,5 +982,11 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(encoding='utf-8')
     print("梦幻西游记账软件 v2.0 启动中...")
     print(f"数据文件: {DATA_FILE}")
+    print(f"备份目录: {BACKUP_DIR}")
     print(f"访问地址: http://localhost:5000")
+
+    # 启动自动备份线程（守护线程，主进程退出时自动结束）
+    t = threading.Thread(target=backup_scheduler, daemon=True)
+    t.start()
+
     app.run(debug=True, host="127.0.0.1", port=5000)
