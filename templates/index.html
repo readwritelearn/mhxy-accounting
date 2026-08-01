@@ -350,9 +350,9 @@ sel.innerHTML=ms.map(m=>'<option value="'+m+'"'+(m===d.profit.month?' selected':
 // Trend chart
 var trend=d.daily_trend;var labels=trend.map(x=>x.date.slice(5));
 var ctx2=$('#trendChart');if(trendChart)trendChart.destroy();
-trendChart=new Chart(ctx2,{type:'bar',data:{labels,datasets:[
-{label:'收入',data:trend.map(x=>x.income),backgroundColor:'rgba(39,174,96,0.4)',borderColor:'#27ae60',borderWidth:1,borderRadius:3},
-{label:'费用',data:trend.map(x=>x.expense),backgroundColor:'rgba(231,76,60,0.4)',borderColor:'#e74c3c',borderWidth:1,borderRadius:3},
+trendChart=new Chart(ctx2,{type:'line',data:{labels,datasets:[
+{label:'收入',data:trend.map(x=>x.income),borderColor:'#27ae60',backgroundColor:'rgba(39,174,96,0.1)',fill:true,tension:0.3,pointRadius:3,pointHoverRadius:5},
+{label:'费用',data:trend.map(x=>x.expense),borderColor:'#e74c3c',backgroundColor:'rgba(231,76,60,0.1)',fill:true,tension:0.3,pointRadius:3,pointHoverRadius:5},
 ]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:v=>v>=1e4?(v/1e4).toFixed(1)+'万':v},grid:{color:'#f0f0f0'}}}}});
 }
 
