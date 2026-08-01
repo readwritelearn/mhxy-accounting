@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-梦幻西游记账软件 v2.0
+大包集团经营概览 v2.0
 =====================
 统一游戏币记账 | 库存成本核算 | 预收货池缓冲 | 资产/利润总览
 
@@ -981,7 +981,7 @@ def api_update_config():
 if __name__ == "__main__":
     import sys
     sys.stdout.reconfigure(encoding='utf-8')
-    print("梦幻西游记账软件 v2.0 启动中...")
+    print("大包集团经营概览 v2.0 启动中...")
     print(f"数据文件: {DATA_FILE}")
     print(f"备份目录: {BACKUP_DIR}")
     print(f"访问地址: http://localhost:5000")
