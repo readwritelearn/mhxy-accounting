@@ -228,8 +228,15 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <div class="modal-header"><h6 class="modal-title" id="incomeTitle">收入</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
 <div class="modal-body">
 <div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="inDate"></div>
-<div class="mb-2"><label class="form-label">金额</label><input type="number" class="form-control" id="inAmount" placeholder="游戏币" step="1"></div>
-<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="inDesc" placeholder="可选"></div>
+<div id="inGeneric"><div class="mb-2"><label class="form-label">金额</label><input type="number" class="form-control" id="inAmount" placeholder="游戏币" step="1"></div></div>
+<div id="inSchool" style="display:none">
+<div class="row g-2">
+<div class="col-6"><label class="form-label">师门前金币</label><input type="number" class="form-control" id="inBefore" placeholder="做师门前" step="1"></div>
+<div class="col-6"><label class="form-label">师门后金币</label><input type="number" class="form-control" id="inAfter" placeholder="做师门后" step="1"></div>
+</div>
+<div class="auto-calc" id="inSchoolPreview" style="display:none;margin-top:8px">📐 差值 = 收入: <strong id="inSchoolDiff">0</strong></div>
+</div>
+<div class="mb-2 mt-2"><label class="form-label">备注</label><input type="text" class="form-control" id="inDesc" placeholder="可选"></div>
 </div>
 <div class="modal-footer">
 <button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
@@ -436,7 +443,7 @@ var m;var bs;
 if(type==='purchaseSingle'){m=document.getElementById('modal-purchaseSingle');bs=new bootstrap.Modal(m);initDates();$('#psQty').value=1;$('#psCost').value='';$('#psName').value='';$('#psTotal').textContent='0';}
 if(type==='purchaseBulk'){m=document.getElementById('modal-purchaseBulk');bs=new bootstrap.Modal(m);initDates();$('#pbName').value='';$('#pbAmount').value='';$('#pbNote').value='';}
 if(type==='sell'){m=document.getElementById('modal-sell');bs=new bootstrap.Modal(m);initDates();$('#slDetail').style.display='none';loadInventoryForSell();}
-if(type==='income'){incomeCat=cat;m=document.getElementById('modal-income');bs=new bootstrap.Modal(m);initDates();$('#inAmount').value='';$('#inDesc').value='';var titles={vitality:'⚡ 体力活力收入',school:'📋 师门收入',random:'🎁 随机物品收入'};$('#incomeTitle').textContent=titles[cat]||'收入';}
+if(type==='income'){incomeCat=cat;m=document.getElementById('modal-income');bs=new bootstrap.Modal(m);initDates();$('#inAmount').value='';$('#inBefore').value='';$('#inAfter').value='';$('#inDesc').value='';$('#inSchoolPreview').style.display='none';var titles={vitality:'⚡ 体力活力收入',school:'📋 师门收入',random:'🎁 随机物品收入'};$('#incomeTitle').textContent=titles[cat]||'收入';if(cat==='school'){$('#inGeneric').style.display='none';$('#inSchool').style.display=''}else{$('#inGeneric').style.display='';$('#inSchool').style.display='none'}}
 if(type==='pointcard'){m=document.getElementById('modal-pointcard');bs=new bootstrap.Modal(m);initDates();$('#pcLogin').value='';$('#pcLogout').value='';$('#pcDesc').value='';$('#pcAccounts').value='1';$('#pcPreview').style.display='none';}
 if(type==='initBalance'){m=document.getElementById('modal-initBalance');bs=new bootstrap.Modal(m);$('#ibCurrent').textContent=$('#astBalance').textContent;$('#ibAmount').value='';}
 bs.show();
@@ -495,8 +502,16 @@ refreshAll();
 }
 
 async function doIncome(){
-var amount=parseFloat($('#inAmount').value);
-if(!amount||!incomeCat)return toast('请填写金额','error');
+var amount;
+if(incomeCat==='school'){
+var before=parseFloat($('#inBefore').value),after=parseFloat($('#inAfter').value);
+if(isNaN(before)||isNaN(after))return toast('请填写师门前后的金币数量','error');
+amount=after-before;
+if(amount<=0)return toast('师门后金币应大于师门前金币','error');
+}else{
+amount=parseFloat($('#inAmount').value);
+if(!amount)return toast('请填写金额','error');
+}
 try{await api('/api/income',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#inDate').value,category:incomeCat,amount:amount,description:$('#inDesc').value})})}catch(e){return}
 toast('✅ 收入已记录！');bootstrap.Modal.getInstance(document.getElementById('modal-income')).hide();
 refreshAll();
@@ -531,6 +546,8 @@ $('#pcPreview').style.display='block';
 $('#pcLogin').addEventListener('change',updatePcPreview);
 $('#pcLogout').addEventListener('change',updatePcPreview);
 $('#pcAccounts').addEventListener('change',updatePcPreview);
+$('#inBefore').addEventListener('input',function(){var b=parseFloat(this.value)||0,a=parseFloat($('#inAfter').value)||0;var d=a-b;$('#inSchoolDiff').textContent=fm(d);$('#inSchoolDiff').style.color=d>0?'var(--green)':'#e74c3c';$('#inSchoolPreview').style.display=(this.value||$('#inAfter').value)?'block':'none'});
+$('#inAfter').addEventListener('input',function(){var b=parseFloat($('#inBefore').value)||0,a=parseFloat(this.value)||0;var d=a-b;$('#inSchoolDiff').textContent=fm(d);$('#inSchoolDiff').style.color=d>0?'var(--green)':'#e74c3c';$('#inSchoolPreview').style.display=(this.value||$('#inBefore').value)?'block':'none'});
 
 async function doInitBalance(){
 var amount=parseFloat($('#ibAmount').value);
