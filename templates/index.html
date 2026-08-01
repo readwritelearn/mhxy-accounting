@@ -648,7 +648,7 @@ h+='</tbody></table>';tbl.innerHTML=h;
 fetch('/api/currency-price/trend').then(r=>r.json()).then(function(trend){
 setTimeout(function(){
 var ctx=document.getElementById('priceChart');if(!ctx||!trend.length)return;
-if(window.priceChart)window.priceChart.destroy();
+try{window.priceChart.destroy()}catch(e){}
 window.priceChart=new Chart(ctx,{type:'line',data:{labels:trend.map(function(x){return x.date.slice(5)}),datasets:[
 {label:'均价(元/3000万)',data:trend.map(function(x){return x.avg_price}),borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
 {label:'最低',data:trend.map(function(x){return x.min_price}),borderColor:'#3498db',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
