@@ -348,7 +348,7 @@ function initDates(){var t=td();['psDate','pbDate','slDate','inDate','pcDate'].f
 $$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions();if(this.dataset.tab==='currency')loadCurrencyTab()})});
 
 // ========== Charts ==========
-let assetChart=null,trendChart=null,priceChart=null;
+let assetChart=null,trendChart=null;
 
 // ========== Dashboard ==========
 async function loadDashboard(month){
@@ -626,33 +626,36 @@ if($('#tab-transactions').classList.contains('active'))loadTransactions();
 }
 
 // ========== Currency Price ==========
-async function loadCurrencyTab(){
-var elCpDate=$('#cpDate');if(elCpDate)elCpDate.value=new Date().toISOString().slice(0,10);
-var now=new Date();var elCpTime=$('#cpTime');if(elCpTime)elCpTime.value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
-var elCpRmb=$('#cpRmb');if(elCpRmb)elCpRmb.value='';
-var elCpNote=$('#cpNote');if(elCpNote)elCpNote.value='';
-var elPrev=$('#cpPreview2');if(elPrev)elPrev.style.display='none';
+function loadCurrencyTab(){
+// 设置默认日期时间
+var dt=document.getElementById('cpDate');if(dt)dt.value=new Date().toISOString().slice(0,10);
+var tm=document.getElementById('cpTime');if(tm){var n=new Date();tm.value=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')}
+var rm=document.getElementById('cpRmb');if(rm)rm.value='';
+var nt=document.getElementById('cpNote');if(nt)nt.value='';
+var pv=document.getElementById('cpPreview2');if(pv)pv.style.display='none';
 
-// 表格
-try{var prices=await api('/api/currency-price')}catch(e){prices=[]}
+// 拉数据
+fetch('/api/currency-price').then(r=>r.json()).then(function(prices){
+var tbl=document.getElementById('priceTable');if(!tbl)return;
+if(!prices.length){tbl.innerHTML='<div class="empty-state">暂无币价记录</div>';return}
 prices.reverse();
-var elTbl=$('#priceTable');
-if(elTbl){elTbl.innerHTML=prices.length?buildTable(['日期','时间','3000万=?元','备注'],prices.slice(0,30).map(p=>[p.date,p.time,p.price+'元',p.note||'-'])):'<div class="empty-state">暂无币价记录</div>'}
+var h='<table class="table table-sm"><thead><tr><th>日期</th><th>时间</th><th>3000万=?元</th><th>备注</th></tr></thead><tbody>';
+prices.slice(0,30).forEach(function(p){h+='<tr><td>'+p.date+'</td><td>'+p.time+'</td><td>'+p.price+'元</td><td>'+(p.note||'-')+'</td></tr>'});
+h+='</tbody></table>';tbl.innerHTML=h;
+}).catch(function(){var tbl=document.getElementById('priceTable');if(tbl)tbl.innerHTML='<div class="empty-state">加载失败</div>'});
 
-// 图表 - 延迟渲染等 Tab 完全显示
-var trend_data=[];try{trend_data=await api('/api/currency-price/trend')}catch(e){}
-setTimeout(()=>{
-var ctx=document.getElementById('priceChart');if(!ctx)return;
-try{
-var trend=trend_data;
-if(priceChart)priceChart.destroy();
-priceChart=new Chart(ctx,{type:'line',data:{labels:trend.map(x=>x.date.slice(5)),datasets:[
-{label:'均价(元/3000万)',data:trend.map(x=>x.avg_price),borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
-{label:'最低',data:trend.map(x=>x.min_price),borderColor:'#3498db',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
-{label:'最高',data:trend.map(x=>x.max_price),borderColor:'#e74c3c',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
-]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:v=>v+'元'},grid:{color:'#f0f0f0'}}}}});
-}catch(e){}
+// 图表（延迟等 Tab 可见）
+fetch('/api/currency-price/trend').then(r=>r.json()).then(function(trend){
+setTimeout(function(){
+var ctx=document.getElementById('priceChart');if(!ctx||!trend.length)return;
+if(window.priceChart)window.priceChart.destroy();
+window.priceChart=new Chart(ctx,{type:'line',data:{labels:trend.map(function(x){return x.date.slice(5)}),datasets:[
+{label:'均价(元/3000万)',data:trend.map(function(x){return x.avg_price}),borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
+{label:'最低',data:trend.map(function(x){return x.min_price}),borderColor:'#3498db',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
+{label:'最高',data:trend.map(function(x){return x.max_price}),borderColor:'#e74c3c',borderDash:[5,3],pointRadius:0,fill:false,borderWidth:1.5,tension:0.4},
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:function(v){return v+'元'}},grid:{color:'#f0f0f0'}}}}});
 },200);
+}).catch(function(){});
 }
 
 function updateCpPreview(){
