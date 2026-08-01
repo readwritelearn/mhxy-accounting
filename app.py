@@ -64,6 +64,9 @@ class ExcelDB:
         ws.append(["id", "date", "login_time", "logout_time", "hours",
                     "points_per_hour", "currency_per_point", "account_count",
                     "total_cost", "note", "created_at"])
+        # currency_prices (币价记录)
+        ws = wb.create_sheet("currency_prices")
+        ws.append(["id", "date", "time", "price", "note", "created_at"])
         wb.save(self.filepath)
 
     # ---------- 通用 ----------
@@ -477,6 +480,43 @@ class ExcelDB:
         )
         return tid, hours, total_cost
 
+    # ---------- 币价记录 ----------
+    def add_currency_price(self, t_date, t_time, price, note=""):
+        cid = self._next_id("currency_prices")
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._append_row("currency_prices", [cid, t_date, t_time, price, note, now])
+        return cid
+
+    def get_currency_prices(self):
+        rows = self._read_all("currency_prices")
+        result = []
+        for r in rows:
+            r["id"] = int(r["id"] or 0)
+            r["price"] = float(r["price"] or 0)
+            result.append(r)
+        result.sort(key=lambda x: (str(x.get("date", "")), str(x.get("time", ""))))
+        return result
+
+    def get_currency_trend(self):
+        """返回每日均价，用于折线图"""
+        rows = self.get_currency_prices()
+        daily = {}  # date -> [prices]
+        for r in rows:
+            d = str(r.get("date", ""))[:10]
+            if d:
+                daily.setdefault(d, []).append(r["price"])
+        result = []
+        for d in sorted(daily.keys()):
+            prices = daily[d]
+            result.append({
+                "date": d,
+                "avg_price": round(sum(prices) / len(prices), 0),
+                "min_price": min(prices),
+                "max_price": max(prices),
+                "count": len(prices),
+            })
+        return result
+
     # ---------- 汇总 ----------
     def get_summary(self, month=None):
         """资产总览 + 利润表"""
@@ -801,6 +841,27 @@ def api_daily_time():
         request.args.get("start"),
         request.args.get("end"),
     ))
+
+# ---------- 币价趋势 ----------
+@app.route("/api/currency-price")
+def api_currency_prices():
+    return jsonify(db.get_currency_prices())
+
+@app.route("/api/currency-price/trend")
+def api_currency_trend():
+    return jsonify(db.get_currency_trend())
+
+@app.route("/api/currency-price", methods=["POST"])
+def api_add_currency_price():
+    d = request.get_json()
+    t_date = d.get("date", date.today().isoformat())
+    t_time = d.get("time", datetime.now().strftime("%H:%M"))
+    price = _float(d.get("price"))
+    note = d.get("note", "").strip()
+    if price <= 0:
+        return jsonify({"error": "请输入有效价格"}), 400
+    cid = db.add_currency_price(t_date, t_time, price, note)
+    return jsonify({"ok": True, "id": cid})
 
 # ---------- 初始化余额 ----------
 @app.route("/api/balance/init", methods=["POST"])

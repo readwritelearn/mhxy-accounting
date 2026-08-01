@@ -104,6 +104,7 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <li class="nav-item"><a class="nav-link" data-tab="inventory" href="#">📦 库存</a></li>
 <li class="nav-item"><a class="nav-link" data-tab="pool" href="#">📥 预收货池</a></li>
 <li class="nav-item"><a class="nav-link" data-tab="transactions" href="#">📒 流水</a></li>
+<li class="nav-item"><a class="nav-link" data-tab="currency" href="#">💹 币价</a></li>
 </ul>
 
 <!-- Tab: Dashboard -->
@@ -155,6 +156,32 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <div class="section-card">
 <div class="section-title">📒 交易流水</div>
 <div id="txnTable"></div>
+</div>
+</div>
+
+<!-- Tab: Currency Price -->
+<div class="tab-pane" id="tab-currency">
+<div class="row g-3">
+<div class="col-md-8">
+<div class="section-card">
+<div class="section-title">📈 币价趋势（每日均价）</div>
+<canvas id="priceChart" height="60"></canvas>
+</div>
+</div>
+<div class="col-md-4">
+<div class="section-card">
+<div class="section-title">💹 记录币价</div>
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="cpDate"></div>
+<div class="mb-2"><label class="form-label">时间</label><input type="time" class="form-control" id="cpTime"></div>
+<div class="mb-2"><label class="form-label">比例 (万游戏币/元)</label><input type="number" class="form-control" id="cpPrice" placeholder="如：10.5 (代表10.5万/元)" step="0.1"></div>
+<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="cpNote" placeholder="可选"></div>
+<button class="btn btn-gold w-100" onclick="doAddPrice()">记录币价</button>
+</div>
+<div class="section-card mt-3">
+<div class="section-title">📋 近期记录</div>
+<div id="priceTable" style="max-height:400px;overflow-y:auto"></div>
+</div>
+</div>
 </div>
 </div>
 
@@ -317,10 +344,10 @@ async function api(p,o){try{var r=await fetch(p,o);var d=await r.json().catch(()
 function initDates(){var t=td();['psDate','pbDate','slDate','inDate','pcDate'].forEach(id=>{var el=$('#'+id);if(el)el.value=t})}
 
 // ========== Tabs ==========
-$$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions()})});
+$$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions();if(this.dataset.tab==='currency')loadCurrencyTab()})});
 
 // ========== Charts ==========
-let assetChart=null,trendChart=null;
+let assetChart=null,trendChart=null,priceChart=null;
 
 // ========== Dashboard ==========
 async function loadDashboard(month){
@@ -595,6 +622,29 @@ loadDashboard($('#plMonth').value||undefined);
 if($('#tab-inventory').classList.contains('active'))loadInventory();
 if($('#tab-pool').classList.contains('active'))loadPool();
 if($('#tab-transactions').classList.contains('active'))loadTransactions();
+}
+
+// ========== Currency Price ==========
+async function loadCurrencyTab(){
+var td_=new Date().toISOString().slice(0,10);$('#cpDate').value=td_;var now=new Date();$('#cpTime').value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');$('#cpPrice').value='';$('#cpNote').value='';
+try{var trend=await api('/api/currency-price/trend');var prices=await api('/api/currency-price')}catch(e){return}
+// Chart
+var ctx=$('#priceChart');if(priceChart)priceChart.destroy();
+priceChart=new Chart(ctx,{type:'line',data:{labels:trend.map(x=>x.date.slice(5)),datasets:[
+{label:'均价(万/元)',data:trend.map(x=>x.avg_price),borderColor:'#e67e22',backgroundColor:'rgba(230,126,34,0.1)',fill:true,tension:0.3,pointRadius:3,pointHoverRadius:5},
+{label:'最低',data:trend.map(x=>x.min_price),borderColor:'#3498db',borderDash:[4,2],pointRadius:1,fill:false},
+{label:'最高',data:trend.map(x=>x.max_price),borderColor:'#e74c3c',borderDash:[4,2],pointRadius:1,fill:false},
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa'},grid:{color:'#f0f0f0'}}}}});
+// Table
+prices.reverse();
+$('#priceTable').innerHTML=prices.length?buildTable(['日期','时间','比例(万/元)','备注'],prices.slice(0,30).map(p=>[p.date,p.time,p.price,p.note||'-'])):'<div class="empty-state">暂无币价记录</div>';
+}
+
+async function doAddPrice(){
+var dt=$('#cpDate').value,tm=$('#cpTime').value,pr=parseFloat($('#cpPrice').value),nt=$('#cpNote').value;
+if(!dt||!tm||!pr)return toast('请完整填写','error');
+try{await api('/api/currency-price',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:dt,time:tm,price:pr,note:nt})})}catch(e){return}
+toast('💹 币价已记录');$('#cpPrice').value='';$('#cpNote').value='';loadCurrencyTab();
 }
 
 // ========== Init ==========
