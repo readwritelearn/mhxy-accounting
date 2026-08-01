@@ -947,7 +947,7 @@ def api_init_balance():
         tid = db._next_id("transactions")
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         db._append_row("transactions", [
-            tid, date.today().isoformat(), "income", "random",
+            tid, date.today().isoformat(), "income", "balance_init",
             "初始化游戏币余额: " + str(int(amount)),
             0, amount, 0, None, now
         ])
@@ -958,7 +958,7 @@ def api_init_balance():
     if diff != 0:
         db.add_transaction(
             date.today().isoformat(), "income" if diff > 0 else "expense",
-            "random",
+            "balance_init",
             f"余额校正 (原{current:,.0f} → {amount:,.0f})",
             diff
         )
