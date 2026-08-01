@@ -1,886 +1,543 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>梦幻西游记账软件</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    :root {
-      --bg: #f5f6fa;
-      --card-bg: #ffffff;
-      --border: #e8ecf1;
-      --primary: #e74c3c;
-      --gold: #e67e22;
-      --text: #2c3e50;
-      --text-muted: #95a5a6;
-      --green: #27ae60;
-      --blue: #3498db;
-      --shadow: 0 2px 12px rgba(0,0,0,0.06);
-    }
-    * { box-sizing: border-box; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
-      min-height: 100vh;
-    }
-
-    /* Header */
-    .app-header {
-      background: linear-gradient(135deg, #fff8f0 0%, #fff 50%, #fef9f0 100%);
-      border-bottom: 1px solid #f0e0c0;
-      padding: 20px 0 14px;
-      text-align: center;
-    }
-    .app-header .logo {
-      font-size: 1.6rem;
-      margin: 0;
-      color: #c0392b;
-      font-weight: 800;
-      letter-spacing: 3px;
-    }
-    .app-header .logo .icon { font-size: 1.8rem; }
-    .app-header .subtitle {
-      font-size: 0.78rem;
-      color: #b0a090;
-      margin-top: 4px;
-    }
-
-    /* Tabs */
-    .nav-tabs {
-      border-bottom: 1px solid #e0d8cc;
-      background: #fff;
-      padding: 0 12px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-    }
-    .nav-tabs .nav-link {
-      color: #999;
-      border: none;
-      padding: 11px 16px;
-      font-size: 0.88rem;
-      transition: all 0.2s;
-      border-radius: 0;
-    }
-    .nav-tabs .nav-link.active {
-      color: #c0392b;
-      background: transparent;
-      border-bottom: 2px solid #c0392b;
-      font-weight: 600;
-    }
-    .nav-tabs .nav-link:hover:not(.active) {
-      color: #555;
-      border-bottom: 2px solid #eee;
-    }
-
-    /* Cards */
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 18px 16px;
-      text-align: center;
-      box-shadow: var(--shadow);
-      transition: transform 0.15s;
-    }
-    .stat-card:hover { transform: translateY(-1px); }
-    .stat-card .label { font-size: 0.76rem; color: var(--text-muted); margin-bottom: 4px; }
-    .stat-card .value { font-size: 1.5rem; font-weight: 700; }
-    .stat-card .value.revenue { color: var(--gold); }
-    .stat-card .value.profit { color: var(--green); }
-    .stat-card .sub {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* Chart */
-    .chart-container {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      margin-top: 18px;
-      box-shadow: var(--shadow);
-    }
-
-    /* Tables */
-    .table-container {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-      margin-top: 18px;
-      overflow-x: auto;
-      box-shadow: var(--shadow);
-    }
-    .table {
-      color: var(--text);
-      font-size: 0.83rem;
-      margin: 0;
-    }
-    .table th {
-      color: var(--text-muted);
-      border-color: #eee;
-      font-weight: 500;
-      white-space: nowrap;
-      background: #fafafa;
-    }
-    .table td { border-color: #f0f0f0; vertical-align: middle; }
-    .table tbody tr:hover { background: #fef9f0; }
-
-    /* Forms */
-    .form-section {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 22px;
-      margin-top: 18px;
-      box-shadow: var(--shadow);
-    }
-    .form-section h5 {
-      color: #c0392b;
-      margin-bottom: 14px;
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-    .form-label { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 4px; }
-    .form-control, .form-select {
-      background: #fafbfc;
-      border: 1px solid #dde;
-      color: var(--text);
-      font-size: 0.88rem;
-      border-radius: 6px;
-    }
-    .form-control:focus, .form-select:focus {
-      background: #fff;
-      border-color: #e67e22;
-      color: var(--text);
-      box-shadow: 0 0 0 0.15rem rgba(230,126,34,0.12);
-    }
-
-    .btn-primary-soft {
-      background: #c0392b;
-      border: none;
-      color: #fff;
-      font-weight: 600;
-      font-size: 0.88rem;
-      border-radius: 6px;
-      padding: 8px 18px;
-    }
-    .btn-primary-soft:hover { background: #a93226; color: #fff; }
-    .btn-outline-muted {
-      border: 1px solid #ddd;
-      color: #666;
-      background: #fff;
-      border-radius: 6px;
-      font-size: 0.82rem;
-    }
-    .btn-outline-muted:hover { background: #f5f5f5; }
-    .btn-sm { font-size: 0.78rem; padding: 3px 10px; }
-
-    /* Auto-calc */
-    .auto-calc {
-      background: #fef9f0;
-      border: 1px solid #f0e0c0;
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-top: 10px;
-      font-size: 0.82rem;
-      color: #b09060;
-    }
-    .auto-calc strong { color: #c0392b; }
-
-    /* Toast */
-    .toast-container {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 9999;
-    }
-
-    /* Empty state */
-    .empty-state {
-      text-align: center;
-      padding: 30px;
-      color: #ccc;
-      font-size: 0.88rem;
-    }
-    .empty-state .icon { font-size: 2rem; display: block; margin-bottom: 8px; }
-
-    /* Section title */
-    .section-title {
-      color: #888;
-      font-size: 0.82rem;
-      font-weight: 500;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    /* Badge */
-    .badge-soft { font-weight: 400; font-size: 0.75rem; padding: 3px 8px; border-radius: 12px; }
-
-    @media (max-width: 768px) {
-      .app-header .logo { font-size: 1.2rem; }
-      .stat-card .value { font-size: 1.2rem; }
-      .nav-tabs .nav-link { padding: 8px 8px; font-size: 0.73rem; }
-    }
-
-    .tab-pane { display: none; }
-    .tab-pane.active { display: block; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>梦幻西游记账 v2</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f5f6fa;--card-bg:#fff;--border:#e8ecf1;--red:#c0392b;--gold:#e67e22;--text:#2c3e50;--muted:#95a5a6;--green:#27ae60;--shadow:0 2px 12px rgba(0,0,0,0.06);}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingFang SC",sans-serif;min-height:100vh}
+.app-header{background:#fff;border-bottom:1px solid #f0e0c0;padding:12px 0;text-align:center}
+.app-header .logo{font-size:1.3rem;color:var(--red);font-weight:800;letter-spacing:2px}
+/* Asset Bar */
+.asset-bar{background:#fff;border-bottom:1px solid var(--border);padding:10px 0}
+.asset-item{text-align:center;padding:4px 8px}
+.asset-item .val{font-size:1.15rem;font-weight:700}
+.asset-item .lbl{font-size:0.7rem;color:var(--muted)}
+.asset-divider{font-size:1.3rem;color:#ddd;padding:0 4px}
+.asset-total .val{font-size:1.3rem;color:var(--red)}
+.pool-warning{background:#fef3e0;color:var(--gold);font-size:0.72rem;padding:2px 8px;border-radius:10px;margin-left:6px;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+/* Action Buttons */
+.action-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:16px 0}
+.action-btn{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:all .15s;box-shadow:var(--shadow);font-size:.88rem;color:var(--text);user-select:none}
+.action-btn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,0.1);border-color:#d0c0a0}
+.action-btn .icon{font-size:1.6rem;display:block;margin-bottom:4px}
+.action-btn.expense:hover{border-color:#e74c3c;background:#fef5f5}
+.action-btn.income:hover{border-color:var(--green);background:#f5fdf8}
+.action-btn.special:hover{border-color:var(--gold);background:#fffdf5}
+/* Section */
+.section-card{background:var(--card-bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:16px;box-shadow:var(--shadow)}
+.section-title{color:#888;font-size:.82rem;font-weight:500;margin-bottom:10px}
+/* Tables */
+.table{color:var(--text);font-size:.82rem;margin:0}
+.table th{color:var(--muted);border-color:#eee;font-weight:500;white-space:nowrap;background:#fafafa}
+.table td{border-color:#f0f0f0;vertical-align:middle}
+.table tbody tr:hover{background:#fef9f0}
+/* Modals */
+.modal-content{border-radius:12px;border:none;box-shadow:0 8px 30px rgba(0,0,0,0.15)}
+.modal-header{border-bottom:1px solid #f0f0f0;padding:14px 18px}
+.modal-body{padding:18px}
+.modal-footer{border-top:1px solid #f0f0f0;padding:12px 18px}
+.form-label{color:var(--muted);font-size:.82rem;margin-bottom:3px}
+.form-control,.form-select{font-size:.88rem;border-radius:6px;border:1px solid #dde}
+.form-control:focus,.form-select:focus{border-color:var(--gold);box-shadow:0 0 0 .15rem rgba(230,126,34,.12)}
+.btn-red{background:var(--red);color:#fff;font-weight:600;border:none;border-radius:6px;padding:8px 18px}
+.btn-red:hover{background:#a93226;color:#fff}
+.btn-gold{background:var(--gold);color:#fff;font-weight:600;border:none;border-radius:6px}
+.btn-gold:hover{background:#d35400;color:#fff}
+.btn-green{background:var(--green);color:#fff;font-weight:600;border:none;border-radius:6px}
+.btn-green:hover{background:#219a52;color:#fff}
+.btn-outline-sm{border:1px solid #ddd;color:#666;background:#fff;border-radius:6px;font-size:.78rem;padding:3px 10px}
+.btn-outline-sm:hover{background:#f5f5f5}
+/* Toast */
+.toast-container{position:fixed;top:20px;right:20px;z-index:9999}
+/* Empty */
+.empty-state{text-align:center;padding:30px;color:#ccc;font-size:.85rem}
+.badge-pool{font-size:.72rem;padding:2px 8px;border-radius:10px}
+.tab-pane{display:none}
+.tab-pane.active{display:block}
+.nav-pills .nav-link{color:#888;font-size:.84rem;padding:6px 14px;border-radius:16px}
+.nav-pills .nav-link.active{background:var(--red);color:#fff}
+@media(max-width:768px){.action-grid{grid-template-columns:repeat(3,1fr)}.asset-item .val{font-size:.95rem}}
+</style>
 </head>
 <body>
 
-<!-- ==================== Header ==================== -->
-<div class="app-header">
-  <div class="logo"><span class="icon">🐵</span> 梦幻西游记账</div>
-  <div class="subtitle">点卡成本 · 代售利润 · 灵活收入 · 一目了然</div>
+<!-- Header -->
+<div class="app-header"><div class="logo">🐵 梦幻西游记账 v2</div></div>
+
+<!-- Asset Bar -->
+<div class="asset-bar">
+<div class="container-fluid" style="max-width:1100px;margin:0 auto">
+<div class="d-flex justify-content-center align-items-center flex-wrap">
+<div class="asset-item"><div class="lbl">💰 游戏币余额</div><div class="val" id="astBalance">0</div></div>
+<span class="asset-divider">+</span>
+<div class="asset-item"><div class="lbl">📦 库存成本</div><div class="val" id="astInventory">0</div></div>
+<span class="asset-divider">+</span>
+<div class="asset-item"><div class="lbl">📥 预收货池</div><div class="val" id="astPool">0</div><span class="pool-warning" id="poolWarn" style="display:none"></span></div>
+<span class="asset-divider">=</span>
+<div class="asset-item asset-total"><div class="lbl">🏠 总资产</div><div class="val" id="astTotal">0</div></div>
+</div></div></div>
+
+<!-- Main Container -->
+<div class="container-fluid py-3" style="max-width:1100px;margin:0 auto">
+
+<!-- Action Buttons -->
+<div class="action-grid">
+<div class="action-btn expense" onclick="openModal('purchaseSingle')"><span class="icon">🛒</span>单件收货</div>
+<div class="action-btn expense" onclick="openModal('purchaseBulk')"><span class="icon">📦</span>批量收货</div>
+<div class="action-btn income" onclick="openModal('sell')"><span class="icon">💵</span>卖出物品</div>
+<div class="action-btn income" onclick="openModal('income','vitality')"><span class="icon">⚡</span>体力活力</div>
+<div class="action-btn income" onclick="openModal('income','school')"><span class="icon">📋</span>师门收入</div>
+<div class="action-btn income" onclick="openModal('income','random')"><span class="icon">🎁</span>随机物品</div>
+<div class="action-btn expense" onclick="openModal('pointcard')"><span class="icon">💳</span>点卡费用</div>
+<div class="action-btn special" onclick="openModal('initBalance')"><span class="icon">🔧</span>初始化余额</div>
 </div>
 
-<!-- ==================== Tabs ==================== -->
-<ul class="nav nav-tabs" id="mainTabs">
-  <li class="nav-item"><a class="nav-link active" data-tab="dashboard" href="#">📊 总览</a></li>
-  <li class="nav-item"><a class="nav-link" data-tab="timecost" href="#">⏱ 在线时间</a></li>
-  <li class="nav-item"><a class="nav-link" data-tab="consignment" href="#">📦 代售产品</a></li>
-  <li class="nav-item"><a class="nav-link" data-tab="pureoutput" href="#">✨ 纯产出</a></li>
-  <li class="nav-item"><a class="nav-link" data-tab="sales" href="#">💰 销售记录</a></li>
-  <li class="nav-item"><a class="nav-link" data-tab="gold" href="#">🪙 金币余额</a></li>
+<!-- Tabs -->
+<ul class="nav nav-pills mb-2" id="mainTabs">
+<li class="nav-item"><a class="nav-link active" data-tab="dashboard" href="#">📊 总览</a></li>
+<li class="nav-item"><a class="nav-link" data-tab="inventory" href="#">📦 库存</a></li>
+<li class="nav-item"><a class="nav-link" data-tab="pool" href="#">📥 预收货池</a></li>
+<li class="nav-item"><a class="nav-link" data-tab="transactions" href="#">📒 流水</a></li>
 </ul>
 
-<!-- ==================== Toast ==================== -->
-<div class="toast-container" id="toastContainer"></div>
+<!-- Tab: Dashboard -->
+<div class="tab-pane active" id="tab-dashboard">
+<div class="row g-3">
+<div class="col-md-4">
+<div class="section-card" style="text-align:center">
+<div class="section-title">🏠 资产构成</div>
+<canvas id="assetChart" height="200"></canvas>
+</div>
+</div>
+<div class="col-md-8">
+<div class="section-card">
+<div class="d-flex justify-content-between align-items-center">
+<div class="section-title">📈 利润表 <span id="plMonthLabel"></span></div>
+<select class="form-select" style="width:auto;font-size:.8rem" id="plMonth" onchange="loadDashboard(this.value)"></select>
+</div>
+<div id="plTable"></div>
+</div>
+</div>
+</div>
+<div class="section-card">
+<div class="section-title">📈 每日趋势</div>
+<canvas id="trendChart" height="60"></canvas>
+</div>
+</div>
 
-<!-- ==================== Main ==================== -->
-<div class="container-fluid px-3 py-3" style="max-width:1200px; margin:0 auto;">
+<!-- Tab: Inventory -->
+<div class="tab-pane" id="tab-inventory">
+<div class="section-card">
+<div class="d-flex justify-content-between align-items-center">
+<div class="section-title">📦 库存物品</div>
+<span style="font-size:.78rem;color:var(--muted)">成本总计: <strong id="invTotalCost">0</strong></span>
+</div>
+<div id="inventoryTable"></div>
+</div>
+</div>
 
-  <!-- ========== TAB: 总览 ========== -->
-  <div class="tab-pane active" id="tab-dashboard">
-    <div class="row g-3 mt-1">
-      <div class="col-6 col-md-3">
-        <div class="stat-card">
-          <div class="label">📅 今日收入</div>
-          <div class="value revenue" id="todayRevenue">¥0</div>
-          <div class="sub">销售 + 灵活收入</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="stat-card">
-          <div class="label">📅 今日利润</div>
-          <div class="value profit" id="todayProfit">¥0</div>
-          <div class="sub">收入 − 点卡成本</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="stat-card">
-          <div class="label">📆 本月收入</div>
-          <div class="value revenue" id="monthRevenue">¥0</div>
-          <div class="sub" id="monthRange">本月累计</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="stat-card">
-          <div class="label">📆 本月利润</div>
-          <div class="value profit" id="monthProfit">¥0</div>
-          <div class="sub">扣除全部成本</div>
-        </div>
-      </div>
-    </div>
+<!-- Tab: Pre-receipt Pool -->
+<div class="tab-pane" id="tab-pool">
+<div class="section-card">
+<div class="section-title">📥 预收货批次（待拆分） <span class="pool-warning" id="poolWarn2" style="display:none"></span></div>
+<div id="poolTable"></div>
+</div>
+</div>
 
-    <!-- Month Selector -->
-    <div class="d-flex justify-content-between align-items-center mt-3">
-      <select class="form-select" id="monthSelector" style="width:auto;min-width:140px;font-size:0.88rem;" onchange="switchMonth(this.value)">
-        <option value="">加载中...</option>
-      </select>
-      <span style="font-size:0.78rem;color:var(--text-muted);" id="monthIndicator"></span>
-    </div>
-
-    <!-- Chart -->
-    <div class="chart-container">
-      <div class="section-title" id="chartTitle">📈 收入 / 利润趋势</div>
-      <canvas id="trendChart" height="70"></canvas>
-    </div>
-
-    <!-- Recent Sales + Costs -->
-    <div class="row g-3">
-      <div class="col-md-7">
-        <div class="table-container">
-          <div class="section-title">🛒 近期销售记录</div>
-          <div id="recentSalesTable"></div>
-        </div>
-      </div>
-      <div class="col-md-5">
-        <div class="table-container">
-          <div class="section-title">⏱ 近期在线成本</div>
-          <div id="recentCostsTable"></div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== TAB: 在线时间 ========== -->
-  <div class="tab-pane" id="tab-timecost">
-    <div class="form-section">
-      <h5>⏱ 记录在线时间 — 自动换算点卡成本</h5>
-      <form id="timecostForm">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">日期</label>
-            <input type="date" class="form-control" id="tcDate" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">在线时长（小时）</label>
-            <input type="number" class="form-control" id="tcHours" placeholder="如 4.5" step="0.1" min="0.1" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">备注</label>
-            <input type="text" class="form-control" id="tcNote" placeholder="如：抓鬼副本">
-          </div>
-          <div class="col-md-3">
-            <button type="submit" class="btn btn-primary-soft w-100">记录成本</button>
-          </div>
-        </div>
-      </form>
-      <div class="auto-calc" id="tcPreview" style="display:none;">
-        6 点/时 × <span id="tcHoursPreview">0</span> 小时 = <strong id="tcPointsPreview">0</strong> 点 → 成本 <strong id="tcCostPreview">¥0</strong>
-      </div>
-    </div>
-    <div class="table-container">
-      <div class="section-title">📋 在线成本记录</div>
-      <div id="timecostTable"></div>
-    </div>
-  </div>
-
-  <!-- ========== TAB: 代售产品 ========== -->
-  <div class="tab-pane" id="tab-consignment">
-    <div class="form-section">
-      <h5>📦 添加代售产品（有收货成本，差价 = 利润）</h5>
-      <form id="consignmentForm">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">产品名称</label>
-            <input type="text" class="form-control" id="cpName" placeholder="如：160级愤怒腰带" required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">收货成本 (¥)</label>
-            <input type="number" class="form-control" id="cpCost" placeholder="买入价" step="0.01" required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">默认售价 (¥)</label>
-            <input type="number" class="form-control" id="cpPrice" placeholder="卖出价" step="0.01" required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">预期利润</label>
-            <input type="text" class="form-control" id="cpProfitPreview" disabled placeholder="自动计算">
-          </div>
-          <div class="col-md-3">
-            <button type="submit" class="btn btn-primary-soft w-100">添加产品</button>
-          </div>
-        </div>
-      </form>
-    </div>
-    <div class="table-container">
-      <div class="section-title">📋 代售产品列表</div>
-      <div id="consignmentTable"></div>
-    </div>
-  </div>
-
-  <!-- ========== TAB: 纯产出 ========== -->
-  <div class="tab-pane" id="tab-pureoutput">
-    <div class="form-section">
-      <h5>✨ 添加纯产出产品（打造 / 活力服务 — 成本已计入点卡）</h5>
-      <form id="pureoutputForm">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-4">
-            <label class="form-label">产品名称</label>
-            <input type="text" class="form-control" id="poName" placeholder="如：打造服务" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">售价 (¥)</label>
-            <input type="number" class="form-control" id="poPrice" placeholder="卖出价" step="0.01" required>
-          </div>
-          <div class="col-md-3">
-            <button type="submit" class="btn btn-primary-soft w-100">添加产品</button>
-          </div>
-        </div>
-      </form>
-    </div>
-    <div class="table-container">
-      <div class="section-title">📋 纯产出产品列表</div>
-      <div id="pureoutputTable"></div>
-    </div>
-  </div>
-
-  <!-- ========== TAB: 销售记录 ========== -->
-  <div class="tab-pane" id="tab-sales">
-    <div class="form-section">
-      <h5>💰 记录销售</h5>
-      <form id="salesForm">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-2">
-            <label class="form-label">日期</label>
-            <input type="date" class="form-control" id="saleDate" required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">产品类型</label>
-            <select class="form-select" id="saleType" required>
-              <option value="">请选择</option>
-              <option value="consignment">📦 代售产品</option>
-              <option value="pure_output">✨ 纯产出</option>
-            </select>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">选择产品</label>
-            <select class="form-select" id="saleProduct" required>
-              <option value="">请先选择类型</option>
-            </select>
-          </div>
-          <div class="col-md-1">
-            <label class="form-label">数量</label>
-            <input type="number" class="form-control" id="saleQty" value="1" min="1" required>
-          </div>
-          <div class="col-md-2">
-            <label class="form-label">单价 (¥)</label>
-            <input type="number" class="form-control" id="salePrice" step="0.01" required>
-          </div>
-          <div class="col-md-2">
-            <button type="submit" class="btn btn-primary-soft w-100">记录销售</button>
-          </div>
-        </div>
-      </form>
-      <div class="auto-calc" id="salePreview" style="display:none;">
-        收入 <strong id="saleRevenuePreview">¥0</strong> &nbsp;|&nbsp;
-        成本 <strong id="saleCostPreview">¥0</strong> &nbsp;|&nbsp;
-        利润 <strong id="saleProfitPreview">¥0</strong>
-      </div>
-    </div>
-    <div class="table-container">
-      <div class="section-title">📋 销售记录</div>
-      <div id="salesTable"></div>
-    </div>
-  </div>
-
-  <!-- ========== TAB: 金币余额 ========== -->
-  <div class="tab-pane" id="tab-gold">
-    <div class="form-section">
-      <h5>🪙 记录金币余额 — 自动算灵活收入（差值）</h5>
-      <form id="goldForm">
-        <div class="row g-2 align-items-end">
-          <div class="col-md-3">
-            <label class="form-label">日期</label>
-            <input type="date" class="form-control" id="goldDate" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">当日金币总量 (¥)</label>
-            <input type="number" class="form-control" id="goldAmount" placeholder="当前金币总价值" step="0.01" required>
-          </div>
-          <div class="col-md-3">
-            <label class="form-label">备注</label>
-            <input type="text" class="form-control" id="goldNote" placeholder="如：藏宝阁卖金">
-          </div>
-          <div class="col-md-3">
-            <button type="submit" class="btn btn-primary-soft w-100">记录金币</button>
-          </div>
-        </div>
-      </form>
-      <div class="auto-calc" id="goldPreview" style="display:none;">
-        上期: <strong id="goldPrev">¥0</strong> → 本次: <strong id="goldCurr">¥0</strong> → 灵活收入 = <strong id="goldFlex">¥0</strong>
-      </div>
-    </div>
-    <div class="table-container">
-      <div class="section-title">📋 金币余额记录</div>
-      <div id="goldTable"></div>
-    </div>
-  </div>
+<!-- Tab: Transactions -->
+<div class="tab-pane" id="tab-transactions">
+<div class="section-card">
+<div class="section-title">📒 交易流水</div>
+<div id="txnTable"></div>
+</div>
+</div>
 
 </div><!-- /container -->
 
-<!-- ==================== Scripts ==================== -->
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- 单件收货 -->
+<div class="modal fade" id="modal-purchaseSingle" tabindex="-1">
+<div class="modal-dialog modal-sm"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title">🛒 单件收货</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="psDate"></div>
+<div class="mb-2"><label class="form-label">物品名称</label><input type="text" class="form-control" id="psName" placeholder="如：定魂珠"></div>
+<div class="row g-2">
+<div class="col-6"><label class="form-label">数量</label><input type="number" class="form-control" id="psQty" value="1" min="1"></div>
+<div class="col-6"><label class="form-label">单价</label><input type="number" class="form-control" id="psCost" placeholder="游戏币" step="1"></div>
+</div>
+<div class="mt-2" style="color:var(--muted);font-size:.8rem">总支出: <strong id="psTotal">0</strong></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
+<button class="btn btn-red" onclick="doPurchaseSingle()">确认收货</button>
+</div>
+</div></div></div>
+
+<!-- 批量收货 -->
+<div class="modal fade" id="modal-purchaseBulk" tabindex="-1">
+<div class="modal-dialog modal-sm"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title">📦 批量收货</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="pbDate"></div>
+<div class="mb-2"><label class="form-label">批次名</label><input type="text" class="form-control" id="pbName" placeholder="如：傲来清摊一车"></div>
+<div class="mb-2"><label class="form-label">总支出金额</label><input type="number" class="form-control" id="pbAmount" placeholder="游戏币总额" step="1"></div>
+<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="pbNote" placeholder="可选"></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
+<button class="btn btn-red" onclick="doPurchaseBulk()">创建批次</button>
+</div>
+</div></div></div>
+
+<!-- 卖出 -->
+<div class="modal fade" id="modal-sell" tabindex="-1">
+<div class="modal-dialog modal-sm"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title">💵 卖出物品</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="slDate"></div>
+<div class="mb-2"><label class="form-label">选择物品</label><select class="form-select" id="slItem" onchange="onSellItemChange()"><option value="">-- 选择库存物品 --</option></select></div>
+<div id="slDetail" style="display:none">
+<div style="font-size:.78rem;color:var(--muted)">库存: <strong id="slStock">0</strong> | 成本: <strong id="slCost">0</strong> | 上次售价: <strong id="slLast">-</strong></div>
+<div class="row g-2 mt-2">
+<div class="col-6"><label class="form-label">数量</label><input type="number" class="form-control" id="slQty" value="1" min="1"></div>
+<div class="col-6"><label class="form-label">售价/个</label><input type="number" class="form-control" id="slPrice" step="1"></div>
+</div>
+<div class="mt-2" style="font-size:.82rem">预估利润: <strong id="slProfit" style="color:var(--green)">0</strong></div>
+</div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
+<button class="btn btn-green" onclick="doSell()">确认卖出</button>
+</div>
+</div></div></div>
+
+<!-- 体活/师门/随机收入 -->
+<div class="modal fade" id="modal-income" tabindex="-1">
+<div class="modal-dialog modal-sm"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title" id="incomeTitle">收入</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="inDate"></div>
+<div class="mb-2"><label class="form-label">金额</label><input type="number" class="form-control" id="inAmount" placeholder="游戏币" step="1"></div>
+<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="inDesc" placeholder="可选"></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
+<button class="btn btn-green" id="inSubmit" onclick="doIncome()">确认</button>
+</div>
+</div></div></div>
+
+<!-- 点卡 -->
+<div class="modal fade" id="modal-pointcard" tabindex="-1">
+<div class="modal-dialog modal-sm"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title">💳 点卡费用</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="pcDate"></div>
+<div class="mb-2"><label class="form-label">游戏币金额</label><input type="number" class="form-control" id="pcAmount" placeholder="游戏币" step="1"></div>
+<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="pcDesc" placeholder="如：月卡"></div>
+<div style="font-size:.75rem;color:var(--muted)">💡 现金折算: <span id="pcRmbHint">-</span></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
+<button class="btn btn-red" onclick="doPointcard()">确认</button>
+</div>
+</div></div></div>
+
+<!-- 初始化余额 -->
+<div class="modal fade" id="modal-initBalance" tabindex="-1">
+<div class="modal-dialog modal-sm"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title">🔧 设置游戏币余额</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div class="mb-2"><label class="form-label">当前游戏币余额</label><input type="number" class="form-control" id="ibAmount" placeholder="游戏币" step="1"></div>
+<div style="font-size:.75rem;color:var(--muted)">当前余额: <strong id="ibCurrent">0</strong></div>
+</div>
+<div class="modal-footer">
+<button class="btn btn-outline-sm" data-bs-dismiss="modal">取消</button>
+<button class="btn btn-gold" onclick="doInitBalance()">设置</button>
+</div>
+</div></div></div>
+
+<!-- 批量拆分 -->
+<div class="modal fade" id="modal-split" tabindex="-1">
+<div class="modal-dialog modal-lg"><div class="modal-content">
+<div class="modal-header"><h6 class="modal-title">📥 拆分批次 <span id="splitBatchName"></span></h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<div style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+总额: <strong id="splitTotal">0</strong> | 已分配: <strong id="splitAlloc">0</strong> | 剩余: <strong id="splitRemain" style="color:var(--red)">0</strong>
+</div>
+<div id="splitItems"></div>
+<div class="border-top pt-3 mt-3">
+<label class="form-label">添加物品</label>
+<div class="row g-2 align-items-end">
+<div class="col-md-4"><input type="text" class="form-control" id="siName" placeholder="物品名"></div>
+<div class="col-md-2"><input type="number" class="form-control" id="siQty" value="1" min="1"></div>
+<div class="col-md-2"><input type="number" class="form-control" id="siCost" placeholder="单价" step="1"></div>
+<div class="col-md-2"><button class="btn btn-outline-sm w-100" onclick="doAddBatchItem()">+ 添加</button></div>
+<div class="col-md-2"><button class="btn btn-green w-100" onclick="doCompleteBatch()">✅ 完成</button></div>
+</div>
+</div>
+</div>
+</div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-// ========== 工具函数 ==========
-const $ = s => document.querySelector(s);
-const $$ = s => document.querySelectorAll(s);
+// ========== 全局 ==========
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
+function fm(n){return Number(n||0).toLocaleString('zh-CN',{maximumFractionDigits:0})}
+function td(){return new Date().toISOString().slice(0,10)}
+function toast(m,t){var d=document.createElement('div');d.className='toast align-items-center text-white border-0 show';d.style.cssText=`background:${t==='error'?'#e74c3c':'#27ae60'};margin-bottom:8px;min-width:200px;box-shadow:0 4px 12px rgba(0,0,0,0.2);border-radius:8px`;d.innerHTML=`<div class="d-flex"><div class="toast-body" style="font-size:.88rem">${m}</div><button class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button></div>`;$('#toastContainer').appendChild(d);setTimeout(()=>d.remove(),3500)}
+async function api(p,o){try{var r=await fetch(p,o);var d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`错误(${r.status})`);return d}catch(e){toast('❌ '+e.message,'error');throw e}}
 
-const API = async (path, opts = {}) => {
-  try {
-    const r = await fetch(path, opts);
-    const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(data.error || `服务器错误 (${r.status})`);
-    return data;
-  } catch (err) {
-    toast('❌ ' + (err.message || '网络错误，请确认服务器已启动'), 'error');
-    throw err;
-  }
-};
+function initDates(){var t=td();['psDate','pbDate','slDate','inDate','pcDate'].forEach(id=>{var el=$('#'+id);if(el)el.value=t})}
 
-function fmt(n) { return '¥' + Number(n || 0).toLocaleString('zh-CN', {minimumFractionDigits:2,maximumFractionDigits:2}); }
-function today() { return new Date().toISOString().slice(0, 10); }
+// ========== Tabs ==========
+$$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions()})});
 
-function toast(msg, type) {
-  const bg = type === 'error' ? '#e74c3c' : '#27ae60';
-  const div = document.createElement('div');
-  div.className = 'toast align-items-center text-white border-0 show';
-  div.style.cssText = `background:${bg};margin-bottom:8px;min-width:200px;box-shadow:0 4px 12px rgba(0,0,0,0.2);border-radius:8px;`;
-  div.innerHTML = `<div class="d-flex"><div class="toast-body" style="font-size:0.88rem;">${msg}</div>
-    <button class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button></div>`;
-  $('#toastContainer').appendChild(div);
-  setTimeout(() => div.remove(), 3500);
-}
-
-// ========== Tab 切换 ==========
-$$('#mainTabs .nav-link').forEach(link => {
-  link.addEventListener('click', function(e) {
-    e.preventDefault();
-    $$('#mainTabs .nav-link').forEach(l => l.classList.remove('active'));
-    this.classList.add('active');
-    $$('.tab-pane').forEach(p => p.classList.remove('active'));
-    $('#tab-' + this.dataset.tab).classList.add('active');
-    const t = this.dataset.tab;
-    if (t === 'dashboard') loadDashboard();
-    if (t === 'timecost') loadTimeCosts();
-    if (t === 'consignment') loadConsignmentProducts();
-    if (t === 'pureoutput') loadPureOutputProducts();
-    if (t === 'sales') { loadProductsForSale(); loadSales(); }
-    if (t === 'gold') loadGoldBalances();
-  });
-});
-
-// ========== 日期初始化 ==========
-function initDateInputs() {
-  const t = today();
-  ['tcDate','saleDate','goldDate'].forEach(id => { const el = $('#'+id); if(el) el.value = t; });
-}
-
-// ========== 构建表格 ==========
-function buildTable(headers, rows) {
-  let html = '<table class="table table-sm"><thead><tr>';
-  headers.forEach(h => html += `<th>${h}</th>`);
-  html += '</tr></thead><tbody>';
-  if (!rows.length) {
-    html += `<tr><td colspan="${headers.length}" class="text-center" style="color:#ccc;padding:20px;">暂无数据</td></tr>`;
-  } else {
-    rows.forEach(row => {
-      html += '<tr>';
-      row.forEach(cell => html += `<td>${cell}</td>`);
-      html += '</tr>';
-    });
-  }
-  html += '</tbody></table>';
-  return html;
-}
-
-function typeLabel(t) {
-  return t === 'consignment' ? '<span class="badge-soft" style="background:#fef3e0;color:#e67e22;">代售</span>'
-       : '<span class="badge-soft" style="background:#e8f8f0;color:#27ae60;">纯产出</span>';
-}
+// ========== Charts ==========
+let assetChart=null,trendChart=null;
 
 // ========== Dashboard ==========
-let trendChart = null;
+async function loadDashboard(month){
+var u='/api/summary';if(month)u+='?month='+month;
+try{var d=await api(u)}catch(e){return}
+// Assets
+$('#astBalance').textContent=fm(d.assets.balance);
+$('#astInventory').textContent=fm(d.assets.inventory_cost);
+$('#astPool').textContent=fm(d.assets.pool_balance);
+$('#astTotal').textContent=fm(d.assets.total);
+var w=$('#poolWarn');if(d.assets.open_batches>0){w.style.display='inline';w.textContent=d.assets.open_batches+'批待整理'}else w.style.display='none';
+var w2=$('#poolWarn2');if(d.assets.open_batches>0){w2.style.display='inline';w2.textContent='⚠ '+d.assets.open_batches+'个批次未完成'}else w2.style.display='none';
 
-let currentMonth = ''; // 当前仪表盘显示的月份
+// Asset donut
+var ctx1=$('#assetChart');if(assetChart)assetChart.destroy();
+assetChart=new Chart(ctx1,{type:'doughnut',data:{labels:['游戏币余额','库存成本','预收货池'],datasets:[{data:[d.assets.balance,d.assets.inventory_cost,d.assets.pool_balance],backgroundColor:['#3498db','#e67e22','#e74c3c'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}},cutout:'60%'}});
 
-async function loadDashboard(month) {
-  var url = '/api/summary';
-  if (month) url += '?month=' + month;
-  try {
-    var data = await API(url);
-  } catch(e) { return; }
+// P&L
+$('#plMonthLabel').textContent=d.profit.month;
+$('#plTable').innerHTML=`<table class="table table-sm"><tbody>
+<tr><td>📦 代售利润</td><td class="text-end" style="color:${d.profit.sale_profit>=0?'var(--green)':'#e74c3c'}">${fm(d.profit.sale_profit)}</td></tr>
+<tr><td>⚡ 体活收入</td><td class="text-end">${fm(d.profit.vitality_income)}</td></tr>
+<tr><td>📋 师门收入</td><td class="text-end">${fm(d.profit.school_income)}</td></tr>
+<tr><td>🎁 随机物品收入</td><td class="text-end">${fm(d.profit.random_income)}</td></tr>
+<tr style="border-top:2px solid #ddd"><td><strong>总收入</strong></td><td class="text-end"><strong>${fm(d.profit.total_income)}</strong></td></tr>
+<tr><td style="color:#e74c3c">💳 点卡费用</td><td class="text-end" style="color:#e74c3c">-${fm(d.profit.point_card_expense)}</td></tr>
+<tr style="border-top:2px solid #ddd;font-size:1rem"><td><strong>💰 净利润</strong></td><td class="text-end"><strong style="color:${d.profit.net_profit>=0?'var(--green)':'#e74c3c'}">${fm(d.profit.net_profit)}</strong></td></tr>
+</tbody></table>`;
 
-  currentMonth = data.month.month;
+// Month selector
+var sel=$('#plMonth');var ms=d.available_months||[];if(!ms.includes(d.profit.month))ms.push(d.profit.month);ms.sort().reverse();
+sel.innerHTML=ms.map(m=>'<option value="'+m+'"'+(m===d.profit.month?' selected':'')+'>'+m+'</option>').join('');
 
-  // 填充月份选择器
-  var sel = $('#monthSelector');
-  var months = data.available_months || [];
-  if (months.indexOf(currentMonth) === -1) months.push(currentMonth);
-  months.sort().reverse();
-  sel.innerHTML = months.map(m => '<option value="'+m+'"'+(m===currentMonth?' selected':'')+'>'+m+'</option>').join('');
-  $('#monthIndicator').textContent = months.length > 1 ? months.length + ' 个月有数据' : '';
-
-  // 更新统计卡片
-  $('#todayRevenue').textContent = fmt(data.today.revenue);
-  $('#todayProfit').textContent = fmt(data.today.profit);
-  $('#monthRevenue').textContent = fmt(data.month.revenue);
-  $('#monthProfit').textContent = fmt(data.month.profit);
-  $('#monthRange').textContent = data.month.month;
-  $('#chartTitle').textContent = '📈 ' + data.month.month + ' 收入 / 利润趋势';
-
-  // Chart
-  const trend = data.daily_trend;
-  const labels = trend.map(d => d.date.slice(5));
-  const revenues = trend.map(d => d.revenue);
-  const profits = trend.map(d => d.profit);
-  const ctx = $('#trendChart');
-  if (trendChart) trendChart.destroy();
-  trendChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        { label: '收入', data: revenues, backgroundColor: 'rgba(230,126,34,0.35)', borderColor: '#e67e22', borderWidth: 1, borderRadius: 3 },
-        { label: '利润', data: profits, backgroundColor: 'rgba(39,174,96,0.3)', borderColor: '#27ae60', borderWidth: 1, borderRadius: 3 },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { labels: { color: '#888', font: { size: 11 }, usePointStyle: true, pointStyleWidth: 8 } } },
-      scales: {
-        x: { ticks: { color: '#aaa', font: { size: 10 } }, grid: { display: false } },
-        y: { ticks: { color: '#aaa', callback: v => '¥' + (v >= 10000 ? (v/10000).toFixed(1)+'万' : v) }, grid: { color: '#f0f0f0' } }
-      }
-    }
-  });
-
-function switchMonth(month) {
-  if (month) loadDashboard(month);
+// Trend chart
+var trend=d.daily_trend;var labels=trend.map(x=>x.date.slice(5));
+var ctx2=$('#trendChart');if(trendChart)trendChart.destroy();
+trendChart=new Chart(ctx2,{type:'bar',data:{labels,datasets:[
+{label:'收入',data:trend.map(x=>x.income),backgroundColor:'rgba(39,174,96,0.4)',borderColor:'#27ae60',borderWidth:1,borderRadius:3},
+{label:'费用',data:trend.map(x=>x.expense),backgroundColor:'rgba(231,76,60,0.4)',borderColor:'#e74c3c',borderWidth:1,borderRadius:3},
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:v=>v>=1e4?(v/1e4).toFixed(1)+'万':v},grid:{color:'#f0f0f0'}}}}});
 }
 
-  // 近期销售（近 30 天）—— 保证用户能看到数据
-  var thirtyAgo = new Date(Date.now() - 30*86400000).toISOString().slice(0,10);
-  try {
-    var sales = await API('/api/sales?start=' + thirtyAgo + '&end=' + today());
-  } catch(e) { sales = []; }
-  sales.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  if (!sales.length) {
-    $('#recentSalesTable').innerHTML = '<div class="empty-state"><span class="icon">📭</span>暂无销售记录，去「销售记录」Tab 添加吧</div>';
-  } else {
-    $('#recentSalesTable').innerHTML = buildTable(
-      ['日期','产品','类型','数量','单价','收入','成本','利润'],
-      sales.slice(0, 20).map(s => [
-        s.date, s.product_name, typeLabel(s.type), s.quantity, fmt(s.unit_price), fmt(s.revenue), fmt(s.total_cost), fmt(s.profit)
-      ])
-    );
-  }
-
-  // 近期成本（近 30 天）
-  try {
-    var costs = await API('/api/daily-costs?start=' + thirtyAgo + '&end=' + today());
-  } catch(e) { costs = []; }
-  costs.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  if (!costs.length) {
-    $('#recentCostsTable').innerHTML = '<div class="empty-state"><span class="icon">⏱</span>暂无成本记录</div>';
-  } else {
-    $('#recentCostsTable').innerHTML = buildTable(
-      ['日期','在线(时)','点数','成本','备注'],
-      costs.slice(0, 20).map(c => [c.date, c.online_hours+'h', c.points_consumed, fmt(c.total_cost), c.note||'-'])
-    );
-  }
+// ========== Inventory ==========
+async function loadInventory(){
+try{var items=await api('/api/inventory')}catch(e){return}
+var total=items.reduce((s,i)=>s+i.total_cost,0);
+$('#invTotalCost').textContent=fm(total);
+if(!items.length){$('#inventoryTable').innerHTML='<div class="empty-state">📭 暂无库存</div>';return}
+$('#inventoryTable').innerHTML='<table class="table table-sm"><thead><tr><th>物品</th><th>数量</th><th>均价</th><th>总成本</th><th>市值</th><th>上次售价</th><th>预期利润</th><th>操作</th></tr></thead><tbody>'
++items.map(i=>`<tr>
+<td>${i.name}</td><td>${i.quantity}</td><td>${fm(i.avg_cost)}</td><td>${fm(i.total_cost)}</td>
+<td><input type="number" class="form-control form-control-sm" style="width:80px;display:inline" value="${i.market_price||''}" placeholder="市值" onchange="updateMarket(${i.id},this.value)"></td>
+<td>${i.last_sell_price?fm(i.last_sell_price):'-'}</td>
+<td style="color:${(i.market_price||0)>i.avg_cost?'var(--green)':'#999'}">${i.market_price?fm((i.market_price-i.avg_cost)*i.quantity):'-'}</td>
+<td><button class="btn btn-outline-sm" onclick="sellFromInventory(${i.id},'${i.name}',${i.quantity},${i.avg_cost},${i.last_sell_price||i.market_price||i.avg_cost})">卖出</button></td>
+</tr>`).join('')+'</tbody></table>';
 }
 
-// ========== 在线时间 ==========
-$('#tcHours').addEventListener('input', function() {
-  const h = parseFloat(this.value) || 0;
-  if (h > 0) {
-    $('#tcPreview').style.display = 'block';
-    $('#tcHoursPreview').textContent = h;
-    $('#tcPointsPreview').textContent = Math.round(h * 6);
-    API('/api/config').then(cfg => {
-      $('#tcCostPreview').textContent = fmt(h * 6 * parseFloat(cfg.point_cost_rate || '0.1'));
-    }).catch(()=>{});
-  } else { $('#tcPreview').style.display = 'none'; }
-});
-
-$('#timecostForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  try {
-    var res = await API('/api/daily-costs', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ date: $('#tcDate').value, online_hours: parseFloat($('#tcHours').value), note: $('#tcNote').value }) });
-  } catch(e) { return; }
-  if (res.error) { toast(res.error, 'error'); return; }
-  toast('成本记录成功！');
-  this.reset(); initDateInputs(); $('#tcPreview').style.display = 'none';
-  loadTimeCosts();
-});
-
-async function loadTimeCosts() {
-  var data = await API('/api/daily-costs').catch(() => []);
-  data.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  $('#timecostTable').innerHTML = data.length
-    ? buildTable(['日期','在线(时)','点数/时','消耗点数','成本','备注'], data.map(c => [c.date, c.online_hours+'h', c.points_per_hour, c.points_consumed, fmt(c.total_cost), c.note||'-']))
-    : '<div class="empty-state"><span class="icon">⏱</span>暂无在线时间记录</div>';
+function sellFromInventory(id,name,qty,cost,lastPrice){
+var m=document.getElementById('modal-sell');var bs=new bootstrap.Modal(m);
+$('#slDate').value=td();$('#slItem').innerHTML='<option value="'+id+'">'+name+' (库存'+qty+', 成本'+fm(cost)+')</option>';
+$('#slStock').textContent=qty;$('#slCost').textContent=fm(cost);$('#slLast').textContent=lastPrice?fm(lastPrice):'-';
+$('#slQty').value=1;$('#slPrice').value=lastPrice||'';$('#slDetail').style.display='block';$('#slProfit').textContent='0';
+bs.show();
 }
 
-// ========== 代售产品 ==========
-$('#cpCost').addEventListener('input', updateCpProfit);
-$('#cpPrice').addEventListener('input', updateCpProfit);
-function updateCpProfit() {
-  const cost = parseFloat($('#cpCost').value) || 0;
-  const price = parseFloat($('#cpPrice').value) || 0;
-  $('#cpProfitPreview').value = price > cost ? fmt(price - cost) : '';
+async function updateMarket(id,v){await api('/api/inventory/market',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:id,market_price:parseFloat(v)||0})}).catch(()=>{});loadInventory()}
+
+// ========== Pre-receipt Pool ==========
+async function loadPool(){
+try{var batches=await api('/api/pre-receipt')}catch(e){return}
+if(!batches.length){$('#poolTable').innerHTML='<div class="empty-state">📥 暂无预收货批次</div>';return}
+$('#poolTable').innerHTML='<table class="table table-sm"><thead><tr><th>批次</th><th>总额</th><th>已分配</th><th>剩余</th><th>状态</th><th>备注</th><th>时间</th><th>操作</th></tr></thead><tbody>'
++batches.map(b=>`<tr>
+<td>${b.batch_name}</td><td>${fm(b.total_amount)}</td><td>${fm(b.allocated_amount)}</td>
+<td style="color:${b.total_amount>b.allocated_amount?'#e74c3c':'var(--green)'}">${fm(b.total_amount-b.allocated_amount)}</td>
+<td>${b.status==='open'?'<span class="badge-pool" style="background:#fef3e0;color:#e67e22">待拆分</span>':'<span class="badge-pool" style="background:#e8f8e8;color:#27ae60">已完成</span>'}</td>
+<td>${b.note||'-'}</td><td style="font-size:.75rem">${(b.created_at||'').slice(0,10)}</td>
+<td>${b.status==='open'?`<button class="btn btn-outline-sm me-1" onclick="openSplit(${b.id})">拆分</button><button class="btn btn-outline-sm" style="color:#e74c3c" onclick="delBatch(${b.id})">删</button>`:'-'}</td>
+</tr>`).join('')+'</tbody></table>';
 }
 
-$('#consignmentForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  try {
-    var res = await API('/api/products', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name:$('#cpName').value, type:'consignment', cost_price:parseFloat($('#cpCost').value), selling_price:parseFloat($('#cpPrice').value) }) });
-  } catch(e) { return; }
-  if (res.error) { toast(res.error, 'error'); return; }
-  toast('代售产品添加成功！');
-  this.reset(); $('#cpProfitPreview').value = '';
-  loadConsignmentProducts();
-});
-
-async function loadConsignmentProducts() {
-  var data = await API('/api/products?type=consignment').catch(() => []);
-  $('#consignmentTable').innerHTML = data.length
-    ? buildTable(['名称','收货成本','默认售价','预期利润','操作'], data.map(p => [
-        p.name, fmt(p.cost_price), fmt(p.selling_price), fmt(p.selling_price - p.cost_price),
-        `<button class="btn btn-sm btn-outline-muted" onclick="delProd(${p.id})">删除</button>`
-      ]))
-    : '<div class="empty-state"><span class="icon">📦</span>暂无代售产品，在上方添加</div>';
+// ========== Transactions ==========
+async function loadTransactions(){
+try{var txns=await api('/api/transactions')}catch(e){return}
+txns.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
+if(!txns.length){$('#txnTable').innerHTML='<div class="empty-state">📒 暂无流水</div>';return}
+var catMap={purchase_single:'🛒收货',purchase_bulk:'📦批量收货',sale:'💵卖出',vitality:'⚡体活',school:'📋师门',random:'🎁随机',point_card:'💳点卡'};
+$('#txnTable').innerHTML='<table class="table table-sm"><thead><tr><th>日期</th><th>类型</th><th>描述</th><th>金额</th><th>利润</th><th>余额</th></tr></thead><tbody>'
++txns.slice(0,50).map(t=>`<tr>
+<td>${(t.date||'').slice(0,10)}</td><td>${catMap[t.category]||t.category}</td><td>${t.description||''}</td>
+<td style="color:${t.amount>=0?'var(--green)':'#e74c3c'}">${t.amount>=0?'+':''}${fm(t.amount)}</td>
+<td>${t.profit?fm(t.profit):'-'}</td><td style="font-size:.8rem">${fm(t.balance_after)}</td>
+</tr>`).join('')+'</tbody></table>';
 }
 
-// ========== 纯产出产品 ==========
-$('#pureoutputForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  try {
-    var res = await API('/api/products', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name:$('#poName').value, type:'pure_output', cost_price:0, selling_price:parseFloat($('#poPrice').value) }) });
-  } catch(e) { return; }
-  if (res.error) { toast(res.error, 'error'); return; }
-  toast('纯产出产品添加成功！');
-  this.reset();
-  loadPureOutputProducts();
-});
-
-async function loadPureOutputProducts() {
-  var data = await API('/api/products?type=pure_output').catch(() => []);
-  $('#pureoutputTable').innerHTML = data.length
-    ? buildTable(['名称','售价','操作'], data.map(p => [
-        p.name, fmt(p.selling_price),
-        `<button class="btn btn-sm btn-outline-muted" onclick="delProd(${p.id})">删除</button>`
-      ]))
-    : '<div class="empty-state"><span class="icon">✨</span>暂无纯产出产品，在上方添加</div>';
+// ========== Modal Helpers ==========
+var incomeCat='';
+function openModal(type,cat){
+var m;var bs;
+if(type==='purchaseSingle'){m=document.getElementById('modal-purchaseSingle');bs=new bootstrap.Modal(m);initDates();$('#psQty').value=1;$('#psCost').value='';$('#psName').value='';$('#psTotal').textContent='0';}
+if(type==='purchaseBulk'){m=document.getElementById('modal-purchaseBulk');bs=new bootstrap.Modal(m);initDates();$('#pbName').value='';$('#pbAmount').value='';$('#pbNote').value='';}
+if(type==='sell'){m=document.getElementById('modal-sell');bs=new bootstrap.Modal(m);initDates();$('#slDetail').style.display='none';loadInventoryForSell();}
+if(type==='income'){incomeCat=cat;m=document.getElementById('modal-income');bs=new bootstrap.Modal(m);initDates();$('#inAmount').value='';$('#inDesc').value='';var titles={vitality:'⚡ 体力活力收入',school:'📋 师门收入',random:'🎁 随机物品收入'};$('#incomeTitle').textContent=titles[cat]||'收入';}
+if(type==='pointcard'){m=document.getElementById('modal-pointcard');bs=new bootstrap.Modal(m);initDates();$('#pcAmount').value='';$('#pcDesc').value='';loadPcHint();}
+if(type==='initBalance'){m=document.getElementById('modal-initBalance');bs=new bootstrap.Modal(m);$('#ibCurrent').textContent=$('#astBalance').textContent;$('#ibAmount').value='';}
+bs.show();
 }
 
-async function delProd(pid) {
-  if (!confirm('确定删除该产品吗？')) return;
-  await API('/api/products/' + pid, { method:'DELETE' }).catch(()=>{});
-  toast('产品已删除');
-  loadConsignmentProducts();
-  loadPureOutputProducts();
+async function loadInventoryForSell(){
+try{var items=await api('/api/inventory')}catch(e){return}
+var sel=$('#slItem');sel.innerHTML='<option value="">-- 选择库存物品 --</option>';
+items.forEach(i=>{sel.innerHTML+='<option value="'+i.id+'" data-qty="'+i.quantity+'" data-cost="'+i.avg_cost+'" data-last="'+(i.last_sell_price||i.market_price||'')+'">'+i.name+' (库存'+i.quantity+', 成本'+fm(i.avg_cost)+')</option>'});
 }
 
-// ========== 销售记录 ==========
-$('#saleType').addEventListener('change', loadProductsForSale);
-$('#saleQty').addEventListener('input', updateSalePreview);
-$('#salePrice').addEventListener('input', updateSalePreview);
-$('#saleProduct').addEventListener('change', function() {
-  // 自动填入默认售价
-  const v = this.value;
-  if (!v) return;
-  const prod = JSON.parse(v);
-  if (prod.selling_price && !$('#salePrice').value) {
-    $('#salePrice').value = prod.selling_price;
-  }
-  updateSalePreview();
-});
-
-async function loadProductsForSale() {
-  const ptype = $('#saleType').value;
-  const sel = $('#saleProduct');
-  sel.innerHTML = '<option value="">请选择产品</option>';
-  if (!ptype) return;
-  var products = await API('/api/products?type=' + ptype).catch(() => []);
-  products.forEach(p => {
-    const opt = document.createElement('option');
-    opt.value = JSON.stringify({id:p.id, name:p.name, type:p.type, cost_price:p.cost_price, selling_price:p.selling_price});
-    opt.textContent = p.name + (ptype==='consignment' ? ' [成本'+fmt(p.cost_price)+']' : '');
-    sel.appendChild(opt);
-  });
+function onSellItemChange(){
+var sel=$('#slItem');var opt=sel.options[sel.selectedIndex];
+if(!opt.value){$('#slDetail').style.display='none';return}
+$('#slStock').textContent=opt.dataset.qty;$('#slCost').textContent=fm(opt.dataset.cost);
+$('#slLast').textContent=opt.dataset.last?fm(opt.dataset.last):'-';
+$('#slQty').value=1;$('#slPrice').value=opt.dataset.last||'';
+$('#slDetail').style.display='block';
+updateSellPreview();
+}
+$('#slQty').addEventListener('input',updateSellPreview);
+$('#slPrice').addEventListener('input',updateSellPreview);
+function updateSellPreview(){
+var q=parseInt($('#slQty').value)||0;var p=parseFloat($('#slPrice').value)||0;
+var sel=$('#slItem');var opt=sel.options[sel.selectedIndex];
+var c=parseFloat(opt?.dataset?.cost)||0;
+$('#slProfit').textContent=fm((p-c)*q);
 }
 
-function updateSalePreview() {
-  const prodVal = $('#saleProduct').value;
-  const qty = parseInt($('#saleQty').value) || 0;
-  const price = parseFloat($('#salePrice').value) || 0;
-  if (!prodVal || qty <= 0 || price <= 0) { $('#salePreview').style.display = 'none'; return; }
-  const prod = JSON.parse(prodVal);
-  const revenue = qty * price;
-  const totalCost = (prod.cost_price || 0) * qty;
-  $('#saleRevenuePreview').textContent = fmt(revenue);
-  $('#saleCostPreview').textContent = fmt(totalCost);
-  $('#saleProfitPreview').textContent = fmt(revenue - totalCost);
-  $('#salePreview').style.display = 'block';
+async function loadPcHint(){
+try{var cfg=await api('/api/config')}catch(e){return}
+var ratio=parseFloat(cfg.currency_ratio||100000);
+$('#pcRmbHint').textContent='1元 ≈ '+fm(ratio)+' 游戏币';
+$('#pcAmount').addEventListener('input',function(){var v=parseFloat(this.value)||0;$('#pcRmbHint').textContent='≈ '+(v/ratio).toFixed(2)+' 元'});}
+
+// ========== Actions ==========
+async function doPurchaseSingle(){
+var name=$('#psName').value.trim();var qty=parseInt($('#psQty').value);var cost=parseFloat($('#psCost').value);
+if(!name||!qty||!cost)return toast('请完整填写','error');
+try{await api('/api/purchase/single',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#psDate').value,name:name,quantity:qty,unit_cost:cost})})}catch(e){return}
+toast('✅ 收货成功！');bootstrap.Modal.getInstance(document.getElementById('modal-purchaseSingle')).hide();
+refreshAll();
+}
+$('#psQty').addEventListener('input',function(){var q=parseInt(this.value)||0;var c=parseFloat($('#psCost').value)||0;$('#psTotal').textContent=fm(q*c)});
+$('#psCost').addEventListener('input',function(){var q=parseInt($('#psQty').value)||0;var c=parseFloat(this.value)||0;$('#psTotal').textContent=fm(q*c)});
+
+async function doPurchaseBulk(){
+var name=$('#pbName').value.trim();var amount=parseFloat($('#pbAmount').value);
+if(!name||!amount)return toast('请填写批次名和金额','error');
+try{await api('/api/purchase/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#pbDate').value,batch_name:name,total_amount:amount,note:$('#pbNote').value})})}catch(e){return}
+toast('✅ 批量收货批次已创建！记得去预收货池拆分');bootstrap.Modal.getInstance(document.getElementById('modal-purchaseBulk')).hide();
+refreshAll();
 }
 
-$('#salesForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  const prodVal = $('#saleProduct').value;
-  if (!prodVal) { toast('请选择产品', 'error'); return; }
-  const prod = JSON.parse(prodVal);
-  try {
-    var res = await API('/api/sales', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ date:$('#saleDate').value, product_id:prod.id, product_name:prod.name,
-        type:prod.type, quantity:parseInt($('#saleQty').value), unit_price:parseFloat($('#salePrice').value) }) });
-  } catch(e) { return; }
-  if (res.error) { toast(res.error, 'error'); return; }
-  toast('销售记录成功！');
-  this.reset(); initDateInputs(); $('#salePreview').style.display = 'none';
-  loadSales();
-  loadDashboard();
-});
-
-async function loadSales() {
-  var data = await API('/api/sales').catch(() => []);
-  data.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  $('#salesTable').innerHTML = data.length
-    ? buildTable(['日期','产品','类型','数量','单价','收入','成本','利润'],
-        data.map(s => [s.date, s.product_name, typeLabel(s.type), s.quantity, fmt(s.unit_price), fmt(s.revenue), fmt(s.total_cost), fmt(s.profit)]))
-    : '<div class="empty-state"><span class="icon">💰</span>暂无销售记录</div>';
+async function doSell(){
+var sel=$('#slItem');var opt=sel.options[sel.selectedIndex];
+var id=parseInt(opt.value);var qty=parseInt($('#slQty').value);var price=parseFloat($('#slPrice').value);
+if(!id||!qty||!price)return toast('请完整填写','error');
+try{var r=await api('/api/sell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#slDate').value,inventory_id:id,quantity:qty,sell_price:price})})}catch(e){return}
+toast('💰 卖出成功！利润 '+fm(r.profit));bootstrap.Modal.getInstance(document.getElementById('modal-sell')).hide();
+refreshAll();
 }
 
-// ========== 金币余额 ==========
-$('#goldAmount').addEventListener('input', async function() {
-  const amount = parseFloat(this.value) || 0;
-  if (amount > 0) {
-    var balances = await API('/api/gold-balance').catch(() => []);
-    const prev = balances.length ? balances[balances.length-1].gold_amount : 0;
-    $('#goldPrev').textContent = fmt(prev);
-    $('#goldCurr').textContent = fmt(amount);
-    const flex = amount - prev;
-    $('#goldFlex').textContent = fmt(flex);
-    $('#goldFlex').style.color = flex >= 0 ? 'var(--green)' : '#e74c3c';
-    $('#goldPreview').style.display = 'block';
-  } else { $('#goldPreview').style.display = 'none'; }
-});
-
-$('#goldForm').addEventListener('submit', async function(e) {
-  e.preventDefault();
-  try {
-    var res = await API('/api/gold-balance', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ date:$('#goldDate').value, gold_amount:parseFloat($('#goldAmount').value), note:$('#goldNote').value }) });
-  } catch(e) { return; }
-  if (res.error) { toast(res.error, 'error'); return; }
-  toast('金币记录成功！灵活收入: ' + fmt(res.flexible_income));
-  this.reset(); initDateInputs(); $('#goldPreview').style.display = 'none';
-  loadGoldBalances();
-  loadDashboard();
-});
-
-async function loadGoldBalances() {
-  var data = await API('/api/gold-balance').catch(() => []);
-  data.sort((a,b) => (b.date||'').localeCompare(a.date||''));
-  $('#goldTable').innerHTML = data.length
-    ? buildTable(['日期','金币总量','灵活收入','备注'], data.map(b => [
-        b.date, fmt(b.gold_amount),
-        `<span style="color:${b.flexible_income>=0?'var(--green)':'#e74c3c'}">${fmt(b.flexible_income)}</span>`,
-        b.note||'-'
-      ]))
-    : '<div class="empty-state"><span class="icon">🪙</span>暂无金币记录</div>';
+async function doIncome(){
+var amount=parseFloat($('#inAmount').value);
+if(!amount||!incomeCat)return toast('请填写金额','error');
+try{await api('/api/income',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#inDate').value,category:incomeCat,amount:amount,description:$('#inDesc').value})})}catch(e){return}
+toast('✅ 收入已记录！');bootstrap.Modal.getInstance(document.getElementById('modal-income')).hide();
+refreshAll();
 }
 
-// ========== 启动 ==========
-document.addEventListener('DOMContentLoaded', () => {
-  initDateInputs();
-  loadDashboard();
-});
+async function doPointcard(){
+var amount=parseFloat($('#pcAmount').value);
+if(!amount)return toast('请填写金额','error');
+try{await api('/api/pointcard',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({date:$('#pcDate').value,amount:amount,description:$('#pcDesc').value})})}catch(e){return}
+toast('💳 点卡费用已记录');bootstrap.Modal.getInstance(document.getElementById('modal-pointcard')).hide();
+refreshAll();
+}
+
+async function doInitBalance(){
+var amount=parseFloat($('#ibAmount').value);
+if(isNaN(amount)||amount<0)return toast('请输入有效金额','error');
+try{await api('/api/balance/init',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:amount})})}catch(e){return}
+toast('🔧 余额已设置');bootstrap.Modal.getInstance(document.getElementById('modal-initBalance')).hide();
+refreshAll();
+}
+
+// ========== Pool Split ==========
+var splitBatchId=null;
+async function openSplit(bid){
+splitBatchId=bid;
+try{var batches=await api('/api/pre-receipt');var b=batches.find(x=>x.id===bid);var items=await api('/api/pre-receipt/'+bid+'/items')}catch(e){return}
+$('#splitBatchName').textContent=b.batch_name;var r=b.total_amount-b.allocated_amount;
+$('#splitTotal').textContent=fm(b.total_amount);$('#splitAlloc').textContent=fm(b.allocated_amount);$('#splitRemain').textContent=fm(r);
+$('#splitItems').innerHTML=items.length?items.map(i=>`<div style="font-size:.82rem;padding:4px 0">📦 ${i.name} x${i.quantity} @${fm(i.unit_cost)} = ${fm(i.total_cost)}</div>`).join(''):'<div style="color:#ccc">暂无物品，在下方添加</div>';
+$('#siName').value='';$('#siQty').value=1;$('#siCost').value='';
+var m=document.getElementById('modal-split');var bs=new bootstrap.Modal(m);bs.show();
+}
+
+async function doAddBatchItem(){
+var name=$('#siName').value.trim();var qty=parseInt($('#siQty').value);var cost=parseFloat($('#siCost').value);
+if(!name||!qty||!cost)return toast('请完整填写','error');
+try{await api('/api/pre-receipt/'+splitBatchId+'/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,quantity:qty,unit_cost:cost})})}catch(e){return}
+toast('✅ 物品已添加');openSplit(splitBatchId);
+}
+
+async function doCompleteBatch(){
+if(!confirm('确认完成该批次？剩余金额将均摊到已有物品（如有剩余则创建杂项条目）'))return;
+try{await api('/api/pre-receipt/'+splitBatchId+'/complete',{method:'POST'})}catch(e){return}
+toast('✅ 批次已完成拆分，物品已入库');bootstrap.Modal.getInstance(document.getElementById('modal-split')).hide();
+refreshAll();
+}
+
+async function delBatch(bid){
+if(!confirm('删除该批次将退回剩余金额，确定？'))return;
+try{await api('/api/pre-receipt/'+bid,{method:'DELETE'})}catch(e){return}
+toast('批次已删除，剩余金额已退回');refreshAll();
+}
+
+// ========== Refresh ==========
+function refreshAll(){
+loadDashboard($('#plMonth').value||undefined);
+if($('#tab-inventory').classList.contains('active'))loadInventory();
+if($('#tab-pool').classList.contains('active'))loadPool();
+if($('#tab-transactions').classList.contains('active'))loadTransactions();
+}
+
+// ========== Init ==========
+document.addEventListener('DOMContentLoaded',()=>{initDates();loadDashboard();});
 </script>
 </body>
 </html>
