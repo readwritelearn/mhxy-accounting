@@ -410,7 +410,7 @@ $('#poolTable').innerHTML='<table class="table table-sm"><thead><tr><th>批次</
 <td style="color:${b.total_amount>b.allocated_amount?'#e74c3c':'var(--green)'}">${fm(b.total_amount-b.allocated_amount)}</td>
 <td>${b.status==='open'?'<span class="badge-pool" style="background:#fef3e0;color:#e67e22">待拆分</span>':'<span class="badge-pool" style="background:#e8f8e8;color:#27ae60">已完成</span>'}</td>
 <td>${b.note||'-'}</td><td style="font-size:.75rem">${(b.created_at||'').slice(0,10)}</td>
-<td>${b.status==='open'?`<button class="btn btn-outline-sm me-1" onclick="openSplit(${b.id})">拆分</button><button class="btn btn-outline-sm" style="color:#e74c3c" onclick="delBatch(${b.id})">删</button>`:'-'}</td>
+<td>${b.status==='open'?`<button class="btn btn-outline-sm me-1" onclick="openSplit(${b.id})">拆分</button><button class="btn btn-outline-sm" style="color:#e74c3c" onclick="delBatch(${b.id})">删</button>`:`<button class="btn btn-outline-sm" style="color:#e67e22" onclick="reopenBatch(${b.id})">重开</button>`}</td>
 </tr>`).join('')+'</tbody></table>';
 }
 
@@ -588,6 +588,12 @@ if(!confirm('确认完成该批次？剩余金额将均摊到已有物品（如�
 try{await api('/api/pre-receipt/'+splitBatchId+'/complete',{method:'POST'})}catch(e){return}
 toast('✅ 批次已完成拆分，物品已入库');bootstrap.Modal.getInstance(document.getElementById('modal-split')).hide();
 refreshAll();
+}
+
+async function reopenBatch(bid){
+if(!confirm('重开后将可继续往此批次添加物品，确定？'))return;
+try{await api('/api/pre-receipt/'+bid+'/reopen',{method:'POST'})}catch(e){return}
+toast('批次已重开');refreshAll();
 }
 
 async function delBatch(bid){

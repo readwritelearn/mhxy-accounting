@@ -867,6 +867,14 @@ def api_delete_batch(bid):
     db.delete_batch(bid)
     return jsonify({"ok": True})
 
+@app.route("/api/pre-receipt/<int:bid>/reopen", methods=["POST"])
+def api_reopen_batch(bid):
+    try:
+        db.reopen_batch(bid)
+        return jsonify({"ok": True})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
 @app.route("/api/pre-receipt/<int:bid>/items/<int:iid>", methods=["DELETE"])
 def api_delete_batch_item(bid, iid):
     try:
