@@ -358,6 +358,25 @@ class ExcelDB:
     def update_inventory_market(self, inv_id, market_price):
         self._update_cell("inventory", inv_id, 5, market_price)
 
+    def update_inventory(self, inv_id, data):
+        """更新库存物品：数量、均价、总成本"""
+        wb = load_workbook(self.filepath)
+        ws = wb["inventory"]
+        col_map = {"name": 1, "quantity": 2, "avg_cost": 3, "total_cost": 4,
+                    "market_price": 5, "last_sell_price": 6}
+        for row in ws.iter_rows(min_row=2):
+            if row[0].value == inv_id:
+                for key, col_idx in col_map.items():
+                    if key in data:
+                        row[col_idx].value = data[key]
+                # 如果改了 quantity 或 avg_cost，自动重算 total_cost
+                qty = float(row[2].value or 0)
+                avg = float(row[3].value or 0)
+                row[4].value = round(qty * avg, 0)
+                break
+        wb.save(self.filepath)
+        wb.close()
+
     # ---------- 预收货池 ----------
     def get_batches(self, status=None):
         batches = self._read_all("pre_receipt_batches")
@@ -778,6 +797,19 @@ def api_inventory():
 def api_inventory_market():
     d = request.get_json()
     db.update_inventory_market(_int(d["id"]), _float(d["market_price"]))
+    return jsonify({"ok": True})
+
+@app.route("/api/inventory/<int:iid>", methods=["PUT"])
+def api_update_inventory(iid):
+    d = request.get_json()
+    data = {}
+    if "name" in d: data["name"] = d["name"]
+    if "quantity" in d: data["quantity"] = _int(d["quantity"])
+    if "avg_cost" in d: data["avg_cost"] = _float(d["avg_cost"])
+    if "market_price" in d: data["market_price"] = _float(d["market_price"])
+    if "last_sell_price" in d: data["last_sell_price"] = _float(d["last_sell_price"])
+    if data:
+        db.update_inventory(iid, data)
     return jsonify({"ok": True})
 
 # ---------- 单件收货 ----------
