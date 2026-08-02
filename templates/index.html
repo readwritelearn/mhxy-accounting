@@ -565,7 +565,7 @@ splitBatchId=bid;
 try{var batches=await api('/api/pre-receipt');var b=batches.find(x=>x.id===bid);var items=await api('/api/pre-receipt/'+bid+'/items')}catch(e){return}
 $('#splitBatchName').textContent=b.batch_name;var r=b.total_amount-b.allocated_amount;
 $('#splitTotal').textContent=fm(b.total_amount);$('#splitAlloc').textContent=fm(b.allocated_amount);$('#splitRemain').textContent=fm(r);
-$('#splitItems').innerHTML=items.length?items.map(i=>`<div style="font-size:.82rem;padding:4px 0">📦 ${i.name} x${i.quantity} @${fm(i.unit_cost)} = ${fm(i.total_cost)}</div>`).join(''):'<div style="color:#ccc">暂无物品，在下方添加</div>';
+$('#splitItems').innerHTML=items.length?items.map(i=>`<div style="font-size:.82rem;padding:4px 0;display:flex;justify-content:space-between;align-items:center">📦 ${i.name} x${i.quantity} @${fm(i.unit_cost)} = ${fm(i.total_cost)} <button class="btn btn-outline-sm" style="font-size:.7rem;color:#e74c3c" onclick="delBatchItem(${bid},${i.id})">✕</button></div>`).join(''):'<div style="color:#ccc">暂无物品，在下方添加</div>';
 $('#siName').value='';$('#siQty').value=1;$('#siCost').value='';
 var m=document.getElementById('modal-split');var bs=new bootstrap.Modal(m);bs.show();
 }
@@ -575,6 +575,12 @@ var name=$('#siName').value.trim();var qty=parseInt($('#siQty').value);var cost=
 if(!name||!qty||!cost)return toast('请完整填写','error');
 try{await api('/api/pre-receipt/'+splitBatchId+'/items',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,quantity:qty,unit_cost:cost})})}catch(e){return}
 toast('✅ 物品已添加');openSplit(splitBatchId);
+}
+
+async function delBatchItem(bid,iid){
+if(!confirm('确定移除此物品？已分配金额将退回'))return;
+try{await api('/api/pre-receipt/'+bid+'/items/'+iid,{method:'DELETE'})}catch(e){return}
+toast('物品已移除');openSplit(bid);
 }
 
 async function doCompleteBatch(){

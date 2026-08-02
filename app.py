@@ -455,6 +455,29 @@ class ExcelDB:
             self._delete_row("pre_receipt_items", item["id"])
         self._delete_row("pre_receipt_batches", batch_id)
 
+    def delete_batch_item(self, batch_id, item_id):
+        """删除批次中的单个物品，退回已分配金额"""
+        batches = self.get_batches()
+        batch = next((b for b in batches if b["id"] == batch_id), None)
+        if not batch or batch["status"] != "open":
+            raise ValueError("批次不存在或已关闭")
+        items = self.get_batch_items(batch_id)
+        item = next((i for i in items if i["id"] == item_id), None)
+        if not item:
+            raise ValueError("物品不存在")
+        # 退回已分配金额
+        new_allocated = batch["allocated_amount"] - item["total_cost"]
+        self._update_cell("pre_receipt_batches", batch_id, 3, max(0, new_allocated))
+        self._delete_row("pre_receipt_items", item_id)
+
+    def reopen_batch(self, batch_id):
+        """重新打开已完成的批次（物品保留在库存中，不回退）"""
+        batches = self.get_batches()
+        batch = next((b for b in batches if b["id"] == batch_id), None)
+        if not batch or batch["status"] != "done":
+            raise ValueError("只能重开已完成的批次")
+        self._update_cell("pre_receipt_batches", batch_id, 4, "open")
+
     # ---------- 每日在线时间 ----------
     def get_daily_times(self, start_date=None, end_date=None):
         rows = self._read_all("daily_time")
@@ -843,6 +866,14 @@ def api_delete_batch(bid):
             )
     db.delete_batch(bid)
     return jsonify({"ok": True})
+
+@app.route("/api/pre-receipt/<int:bid>/items/<int:iid>", methods=["DELETE"])
+def api_delete_batch_item(bid, iid):
+    try:
+        db.delete_batch_item(bid, iid)
+        return jsonify({"ok": True})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
 # ---------- 卖出 ----------
 @app.route("/api/sell", methods=["POST"])
