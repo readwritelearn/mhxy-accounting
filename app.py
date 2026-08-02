@@ -312,12 +312,11 @@ class ExcelDB:
 
     def _calc_real_cost(self, product_name):
         """从交易流水反算实时成本:
-           (总购入成本 - 已卖出结转成本) / 当前库存数量 """
+           (总购入成本 - 实际出售总收入) / 剩余数量 """
         import re
         txns = self.get_transactions()
         total_bought = 0
-        total_sold_cost = 0
-        total_sold_qty = 0
+        total_sold_revenue = 0
         for t in txns:
             desc = str(t.get("description", ""))
             # 收货: "收货: name x{qty} @{cost}"
@@ -329,10 +328,7 @@ class ExcelDB:
             if t["category"] == "sale":
                 m = re.search(r"卖出: (.+?) x(\d+)", desc)
                 if m and m.group(1) == product_name:
-                    total_sold_qty += int(m.group(2))
-                    cost_m = re.search(r"成本@([\d,]+)", desc)
-                    if cost_m:
-                        total_sold_cost += float(cost_m.group(1).replace(",", ""))
+                    total_sold_revenue += t["amount"]  # amount 为正 = 收入
 
         # 剩余数量从库存取
         inv = self._read_all("inventory")
@@ -341,9 +337,9 @@ class ExcelDB:
             if i.get("name") == product_name and i.get("status") == "active":
                 curr_qty += int(i["quantity"] or 0)
 
-        remaining_cost = total_bought - total_sold_cost
-        if curr_qty > 0 and remaining_cost > 0:
-            return round(remaining_cost / curr_qty, 0)
+        remaining = total_bought - total_sold_revenue
+        if curr_qty > 0:
+            return round(remaining / curr_qty, 0)
         return 0
 
     def add_inventory(self, name, quantity, unit_cost):
