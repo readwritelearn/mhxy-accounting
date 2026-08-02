@@ -662,7 +662,7 @@ $('#poAmount').value='';$('#poCost').value='';$('#poNote').value='';$('#poPrevie
 fetch('/api/positions').then(r=>r.json()).then(function(items){
 var h='';if(!items.length){h='<div class="empty-state">暂无持仓</div>'}else{
 h='<table class="table table-sm"><thead><tr><th>时间</th><th>数量(万)</th><th>成本(元)</th><th>单价(元/万)</th><th>备注</th><th>操作</th></tr></thead><tbody>';
-items.forEach(function(p){h+='<tr><td>'+(p.date||'')+' '+(p.time||'')+'</td><td>'+p.amount+'</td><td>'+p.cost_rmb+'</td><td>'+p.unit_cost.toFixed(4)+'</td><td>'+(p.note||'-')+'</td><td><button class="btn btn-outline-sm" style="font-size:.7rem" onclick="closePos('+p.id+','+p.cost_rmb+')">平仓</button></td></tr>'});
+items.forEach(function(p){h+='<tr><td>'+(p.date||'')+' '+(p.time||'')+'</td><td>'+p.amount+'</td><td>'+p.cost_rmb+'</td><td>'+p.unit_cost.toFixed(4)+'</td><td>'+(p.note||'-')+'</td><td><button class="btn btn-outline-sm" style="font-size:.7rem" onclick="editPos('+p.id+','+p.amount+','+p.cost_rmb+',\''+(p.note||'')+'\')">✏</button> <button class="btn btn-outline-sm" style="font-size:.7rem" onclick="closePos('+p.id+','+p.cost_rmb+')">平仓</button></td></tr>'});
 h+='</tbody></table>';}
 document.getElementById('positionsTable').innerHTML=h;
 }).catch(function(){});
@@ -692,6 +692,13 @@ var c=parseFloat(document.getElementById('poCost').value);
 if(!a||!c)return toast('请填写数量和成本','error');
 var body=JSON.stringify({date:document.getElementById('poDate').value,time:document.getElementById('poTime').value,amount:a,cost_rmb:c,note:document.getElementById('poNote').value});
 api('/api/positions',{method:'POST',headers:{'Content-Type':'application/json'},body:body}).then(function(){toast('持仓已记录');loadPositions()}).catch(function(){});
+}
+
+function editPos(pid,amt,cost,note){
+var na=prompt('数量 (万):',amt);if(na===null)return;
+var nc=prompt('成本 (元):',cost);if(nc===null)return;
+var nn=prompt('备注:',note||'');if(nn===null)return;
+api('/api/positions/'+pid,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:parseFloat(na),cost_rmb:parseFloat(nc),note:nn})}).then(function(){toast('已更新');loadPositions()}).catch(function(){});
 }
 
 function closePos(pid,cost){
