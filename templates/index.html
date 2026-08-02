@@ -134,6 +134,10 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <div class="section-title">📈 每日趋势</div>
 <canvas id="trendChart" height="60"></canvas>
 </div>
+<div class="section-card">
+<div class="section-title">💎 资产折现趋势 (RMB)</div>
+<canvas id="discountChart" height="50"></canvas>
+</div>
 </div>
 
 <!-- Tab: Inventory -->
@@ -363,7 +367,7 @@ function initDates(){var t=td();['psDate','pbDate','slDate','inDate','pcDate'].f
 $$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions();if(this.dataset.tab==='currency')loadCurrencyTab();if(this.dataset.tab==='positions')loadPositions()})});
 
 // ========== Charts ==========
-let assetChart=null,trendChart=null;
+let assetChart=null,trendChart=null,discountChart=null;
 
 // ========== Dashboard ==========
 async function loadDashboard(month){
@@ -393,6 +397,7 @@ $('#plTable').innerHTML=`<table class="table table-sm"><tbody>
 <tr><td style="color:#e74c3c">💳 点卡费用</td><td class="text-end" style="color:#e74c3c">-${fm(d.profit.point_card_expense)}</td></tr>
 <tr style="border-top:2px solid #ddd;font-size:1rem"><td><strong>💰 净利润</strong></td><td class="text-end"><strong style="color:${d.profit.net_profit>=0?'var(--green)':'#e74c3c'}">${fm(d.profit.net_profit)}</strong></td></tr>
 <tr><td style="color:#8e44ad">💱 实时获利 (RMB)</td><td class="text-end" style="color:#8e44ad"><strong>¥${d.profit.rmb_profit.toFixed(2)}</strong> <span style="font-size:.7rem;color:#aaa">(@${d.profit.price_per_wan.toFixed(4)}元/万)</span></td></tr>
+<tr style="border-top:2px solid #ddd"><td>💎 资产折现 (RMB)</td><td class="text-end"><strong style="color:#8e44ad">¥${d.profit.asset_discount.toFixed(2)}</strong> <span style="font-size:.7rem;color:#aaa">(总资产÷3000万×币价×95%)</span></td></tr>
 </tbody></table>`;
 
 // Month selector
@@ -406,6 +411,13 @@ trendChart=new Chart(ctx2,{type:'line',data:{labels,datasets:[
 {label:'收入',data:trend.map(x=>x.income),borderColor:'#27ae60',backgroundColor:'rgba(39,174,96,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
 {label:'费用',data:trend.map(x=>x.expense),borderColor:'#e74c3c',backgroundColor:'rgba(231,76,60,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
 ]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#aaa',callback:v=>v>=1e4?(v/1e4).toFixed(1)+'万':v},grid:{color:'#f0f0f0'}}}}});
+
+// Discount chart
+var discData=trend.map(x=>x.asset_discount||0);
+var ctx3=$('#discountChart');if(discountChart)discountChart.destroy();
+discountChart=new Chart(ctx3,{type:'line',data:{labels,datasets:[
+{label:'资产折现(RMB)',data:discData,borderColor:'#8e44ad',backgroundColor:'rgba(142,68,173,0.08)',fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6,borderWidth:2.5},
+]},options:{responsive:true,plugins:{legend:{labels:{color:'#888',font:{size:10},usePointStyle:true}}},scales:{x:{ticks:{color:'#aaa',font:{size:9}},grid:{display:false}},y:{ticks:{color:'#8e44ad',callback:v=>'¥'+v.toFixed(0)},grid:{color:'#f0f0f0'}}}}});
 }
 
 // ========== Inventory ==========

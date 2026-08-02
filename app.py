@@ -733,11 +733,23 @@ class ExcelDB:
         price_per_wan = db.get_latest_price_per_wan()
         rmb_profit = round(net_profit / 10000 * price_per_wan, 2) if price_per_wan > 0 else 0
 
+        # 资产折现 = (总资产 / 3000万) × 最新币价 × 95%
+        latest_prices = db.get_currency_prices()
+        latest_price = latest_prices[-1]["price"] if latest_prices else 0
+        asset_discount = round(total_assets / 30000000 * latest_price * 0.95, 2) if latest_price > 0 else 0
+
+        # 获取每日币价均价（用于趋势）
+        currency_trend = db.get_currency_trend()
+        price_map = {c["date"]: c["avg_price"] for c in currency_trend}
+
         # 每日趋势
         daily = []
         d = date(y, m, 1)
         today = date.today()
         end = min(month_end, today)
+        running_bal = 0  # 每日收盘余额
+        all_txns_sorted = sorted(self.get_transactions(), key=lambda t: (str(t.get("date","")), t["id"]))
+        txn_idx = 0
         while d <= end:
             ds = d.isoformat()
             d_txns = [t for t in txns if str(t.get("date", ""))[:10] == ds]
@@ -746,11 +758,19 @@ class ExcelDB:
                           if t["category"] in ("vitality","school","random") and t["amount"] > 0)
             d_expense = sum(abs(t["amount"]) for t in d_txns
                           if t["category"] == "point_card" and t["amount"] < 0)
+            # 当日收盘余额 = 最后一笔交易的 balance_after
+            day_txns_sorted = sorted([t for t in all_txns_sorted if str(t.get("date",""))[:10] <= ds],
+                                     key=lambda t: (t["id"]))
+            closing_bal = day_txns_sorted[-1]["balance_after"] if day_txns_sorted else 0
+            # 当日资产折现
+            day_price = price_map.get(ds, latest_price)
+            day_discount = round(closing_bal / 30000000 * day_price * 0.95, 2) if day_price > 0 else 0
             daily.append({
                 "date": ds,
                 "income": round(d_income, 0),
                 "expense": round(d_expense, 0),
                 "profit": round(d_income - d_expense, 0),
+                "asset_discount": day_discount,
             })
             d += timedelta(days=1)
 
@@ -782,6 +802,7 @@ class ExcelDB:
                 "net_profit": net_profit,
                 "price_per_wan": price_per_wan,
                 "rmb_profit": rmb_profit,
+                "asset_discount": asset_discount,
             },
             "daily_trend": daily,
             "available_months": months_set,
