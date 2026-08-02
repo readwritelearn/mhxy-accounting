@@ -433,9 +433,9 @@ try{var txns=await api('/api/transactions')}catch(e){return}
 txns.sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
 if(!txns.length){$('#txnTable').innerHTML='<div class="empty-state">📒 暂无流水</div>';return}
 var catMap={purchase_single:'🛒收货',purchase_bulk:'📦批量收货',sale:'💵卖出',vitality:'⚡体活',school:'📋师门',random:'🎁随机',point_card:'💳点卡',balance_init:'🔧余额初始化'};
-$('#txnTable').innerHTML='<table class="table table-sm"><thead><tr><th>日期</th><th>类型</th><th>描述</th><th>金额</th><th>利润</th><th>余额</th><th>操作</th></tr></thead><tbody>'
+$('#txnTable').innerHTML='<table class="table table-sm"><thead><tr><th>时间</th><th>类型</th><th>描述</th><th>金额</th><th>利润</th><th>余额</th><th>操作</th></tr></thead><tbody>'
 +txns.slice(0,50).map(t=>`<tr>
-<td>${(t.date||'').slice(0,10)}</td><td>${catMap[t.category]||t.category}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(t.description||'').replace(/"/g,'&quot;')}">${t.description||''}</td>
+<td style="font-size:.75rem;white-space:nowrap">${(t.created_at||t.date||'').slice(0,16)}</td><td>${catMap[t.category]||t.category}</td><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${(t.description||'').replace(/"/g,'&quot;')}">${t.description||''}</td>
 <td style="color:${t.amount>=0?'var(--green)':'#e74c3c'}">${t.amount>=0?'+':''}${fm(t.amount)}</td>
 <td>${t.profit?fm(t.profit):'-'}</td><td style="font-size:.8rem">${fm(t.balance_after)}</td>
 <td style="white-space:nowrap">
