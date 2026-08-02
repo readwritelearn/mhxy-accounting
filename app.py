@@ -311,7 +311,7 @@ class ExcelDB:
         return result
 
     def _calc_realized_profit(self, product_name):
-        """已产生利润 = 该物品累计销售收入 - 累计卖出成本"""
+        """已产生利润 = sum((售价 - 采购成本) × 数量)  for each sale"""
         import re
         txns = self.get_transactions()
         total_revenue = 0
@@ -321,10 +321,12 @@ class ExcelDB:
             if t["category"] == "sale":
                 m = re.search(r"卖出: (.+?) x(\d+)", desc)
                 if m and m.group(1) == product_name:
+                    qty = int(m.group(2))
                     total_revenue += t["amount"]
                     cost_m = re.search(r"成本@([\d,]+)", desc)
                     if cost_m:
-                        total_cost += float(cost_m.group(1).replace(",", ""))
+                        unit_cost = float(cost_m.group(1).replace(",", ""))
+                        total_cost += unit_cost * qty
         return round(total_revenue - total_cost, 0)
 
     def add_inventory(self, name, quantity, unit_cost):
