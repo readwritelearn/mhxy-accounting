@@ -692,7 +692,11 @@ class ExcelDB:
         inventory_cost = sum(i["total_cost"] for i in inventory_items)
         open_batches = self.get_batches("open")
         pool_balance = sum(b["total_amount"] - b["allocated_amount"] for b in open_batches)
-        total_assets = balance + inventory_cost + pool_balance
+        # 持仓
+        pos_summary = self.get_position_summary()
+        position_game_value = round(pos_summary["total_amount"] * 10000, 0)
+        position_cost_rmb = pos_summary["total_cost_rmb"]
+        total_assets = balance + inventory_cost + pool_balance + position_game_value
 
         # 利润表
         if not month:
@@ -762,6 +766,8 @@ class ExcelDB:
                 "balance": balance,
                 "inventory_cost": inventory_cost,
                 "pool_balance": pool_balance,
+                "position_value": position_game_value,
+                "position_cost_rmb": position_cost_rmb,
                 "total": total_assets,
                 "open_batches": len(open_batches),
             },

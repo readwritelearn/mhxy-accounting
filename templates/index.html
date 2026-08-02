@@ -81,6 +81,8 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <div class="asset-item"><div class="lbl">📦 库存成本</div><div class="val" id="astInventory">0</div></div>
 <span class="asset-divider">+</span>
 <div class="asset-item"><div class="lbl">📥 预收货池</div><div class="val" id="astPool">0</div><span class="pool-warning" id="poolWarn" style="display:none"></span></div>
+<span class="asset-divider">+</span>
+<div class="asset-item"><div class="lbl">🏦 持仓</div><div class="val" id="astPosition">0</div></div>
 <span class="asset-divider">=</span>
 <div class="asset-item asset-total"><div class="lbl">🏠 总资产</div><div class="val" id="astTotal">0</div></div>
 </div></div></div>
@@ -371,13 +373,14 @@ try{var d=await api(u)}catch(e){return}
 $('#astBalance').textContent=fm(d.assets.balance);
 $('#astInventory').textContent=fm(d.assets.inventory_cost);
 $('#astPool').textContent=fm(d.assets.pool_balance);
+$('#astPosition').textContent=fm(d.assets.position_value||0);
 $('#astTotal').textContent=fm(d.assets.total);
 var w=$('#poolWarn');if(d.assets.open_batches>0){w.style.display='inline';w.textContent=d.assets.open_batches+'批待整理'}else w.style.display='none';
 var w2=$('#poolWarn2');if(d.assets.open_batches>0){w2.style.display='inline';w2.textContent='⚠ '+d.assets.open_batches+'个批次未完成'}else w2.style.display='none';
 
 // Asset donut
 var ctx1=$('#assetChart');if(assetChart)assetChart.destroy();
-assetChart=new Chart(ctx1,{type:'doughnut',data:{labels:['游戏币余额','库存成本','预收货池'],datasets:[{data:[d.assets.balance,d.assets.inventory_cost,d.assets.pool_balance],backgroundColor:['#3498db','#e67e22','#e74c3c'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}},cutout:'60%'}});
+assetChart=new Chart(ctx1,{type:'doughnut',data:{labels:['游戏币余额','库存成本','预收货池','梦幻币持仓'],datasets:[{data:[d.assets.balance,d.assets.inventory_cost,d.assets.pool_balance,d.assets.position_value||0],backgroundColor:['#3498db','#e67e22','#e74c3c','#8e44ad'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:12}}},cutout:'60%'}});
 
 // P&L
 $('#plMonthLabel').textContent=d.profit.month;
