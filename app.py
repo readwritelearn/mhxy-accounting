@@ -764,7 +764,7 @@ class ExcelDB:
             closing_bal = day_txns_sorted[-1]["balance_after"] if day_txns_sorted else 0
             # 当日资产折现
             day_price = price_map.get(ds, latest_price)
-            day_discount = round(closing_bal / 30000000 * day_price * 0.95, 2) if day_price > 0 else 0
+            day_discount = round(max(0, closing_bal) / 30000000 * day_price * 0.95, 2) if day_price > 0 else 0
             daily.append({
                 "date": ds,
                 "income": round(d_income, 0),
