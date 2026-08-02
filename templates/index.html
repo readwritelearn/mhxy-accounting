@@ -106,6 +106,7 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <li class="nav-item"><a class="nav-link" data-tab="pool" href="#">📥 预收货池</a></li>
 <li class="nav-item"><a class="nav-link" data-tab="transactions" href="#">📒 流水</a></li>
 <li class="nav-item"><a class="nav-link" data-tab="currency" href="#">💹 币价</a></li>
+<li class="nav-item"><a class="nav-link" data-tab="positions" href="#">🏦 持仓</a></li>
 </ul>
 
 <!-- Tab: Dashboard -->
@@ -295,6 +296,34 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 </div>
 </div></div></div>
 
+<!-- Tab: Positions -->
+<div class="tab-pane" id="tab-positions">
+<div class="row g-3">
+<div class="col-md-8">
+<div class="section-card">
+<div class="section-title">🏦 梦幻币持仓</div>
+<div id="positionsTable"></div>
+</div>
+</div>
+<div class="col-md-4">
+<div class="section-card">
+<div class="section-title">📈 持仓总览</div>
+<div id="posSummary"></div>
+</div>
+<div class="section-card mt-3">
+<div class="section-title">➕ 新增持仓</div>
+<div class="mb-2"><label class="form-label">日期</label><input type="date" class="form-control" id="poDate"></div>
+<div class="mb-2"><label class="form-label">时间</label><input type="time" class="form-control" id="poTime"></div>
+<div class="mb-2"><label class="form-label">购入数量 (万)</label><input type="number" class="form-control" id="poAmount" placeholder="如：3000" step="1"></div>
+<div class="mb-2"><label class="form-label">花费 (元)</label><input type="number" class="form-control" id="poCost" placeholder="如：285" step="0.01"></div>
+<div class="auto-calc" id="poPreview" style="display:none;margin-bottom:8px">📐 单价: <strong id="poUnit">0</strong> 元/万</div>
+<div class="mb-2"><label class="form-label">备注</label><input type="text" class="form-control" id="poNote" placeholder="可选"></div>
+<button class="btn btn-gold w-100" onclick="doAddPosition()">记录持仓</button>
+</div>
+</div>
+</div>
+</div>
+
 <!-- 批量拆分 -->
 <div class="modal fade" id="modal-split" tabindex="-1">
 <div class="modal-dialog modal-lg"><div class="modal-content">
@@ -329,7 +358,7 @@ async function api(p,o){try{var r=await fetch(p,o);var d=await r.json().catch(()
 function initDates(){var t=td();['psDate','pbDate','slDate','inDate','pcDate'].forEach(id=>{var el=$('#'+id);if(el)el.value=t})}
 
 // ========== Tabs ==========
-$$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions();if(this.dataset.tab==='currency')loadCurrencyTab()})});
+$$('#mainTabs .nav-link').forEach(l=>{l.addEventListener('click',function(e){e.preventDefault();$$('#mainTabs .nav-link').forEach(x=>x.classList.remove('active'));this.classList.add('active');$$('.tab-pane').forEach(p=>p.classList.remove('active'));$('#tab-'+this.dataset.tab).classList.add('active');if(this.dataset.tab==='dashboard')loadDashboard();if(this.dataset.tab==='inventory')loadInventory();if(this.dataset.tab==='pool')loadPool();if(this.dataset.tab==='transactions')loadTransactions();if(this.dataset.tab==='currency')loadCurrencyTab();if(this.dataset.tab==='positions')loadPositions()})});
 
 // ========== Charts ==========
 let assetChart=null,trendChart=null;
@@ -621,6 +650,50 @@ loadDashboard($('#plMonth').value||undefined);
 if($('#tab-inventory').classList.contains('active'))loadInventory();
 if($('#tab-pool').classList.contains('active'))loadPool();
 if($('#tab-transactions').classList.contains('active'))loadTransactions();
+}
+
+// ========== Positions ==========
+function loadPositions(){
+var now=new Date();$('#poDate').value=now.toISOString().slice(0,10);$('#poTime').value=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+$('#poAmount').value='';$('#poCost').value='';$('#poNote').value='';$('#poPreview').style.display='none';
+fetch('/api/positions').then(r=>r.json()).then(function(items){
+var h='';if(!items.length){h='<div class="empty-state">暂无持仓</div>'}else{
+h='<table class="table table-sm"><thead><tr><th>时间</th><th>数量(万)</th><th>成本(元)</th><th>单价(元/万)</th><th>备注</th><th>操作</th></tr></thead><tbody>';
+items.forEach(function(p){h+='<tr><td>'+(p.date||'')+' '+(p.time||'')+'</td><td>'+p.amount+'</td><td>'+p.cost_rmb+'</td><td>'+p.unit_cost.toFixed(4)+'</td><td>'+(p.note||'-')+'</td><td><button class="btn btn-outline-sm" style="font-size:.7rem" onclick="closePos('+p.id+')">平仓</button></td></tr>'});
+h+='</tbody></table>';}
+document.getElementById('positionsTable').innerHTML=h;
+}).catch(function(){});
+fetch('/api/positions/summary').then(r=>r.json()).then(function(s){
+var html='<div style="font-size:.9rem"><div>📦 持仓总量: <strong>'+s.total_amount+' 万</strong></div>';
+html+='<div>💰 总成本: <strong>¥'+s.total_cost_rmb.toFixed(2)+'</strong></div>';
+html+='<div>📐 均价: <strong>'+s.avg_unit_cost.toFixed(4)+' 元/万</strong></div>';
+html+='<div>📊 持仓笔数: '+s.count+'</div></div>';
+document.getElementById('posSummary').innerHTML=html;
+}).catch(function(){});
+}
+
+function updatePoPreview(){
+var a=parseFloat(document.getElementById('poAmount').value)||0;
+var c=parseFloat(document.getElementById('poCost').value)||0;
+var pv=document.getElementById('poPreview');
+if(!a||!c){pv.style.display='none';return}
+document.getElementById('poUnit').textContent=(c/a).toFixed(4)+' 元/万';
+pv.style.display='block';
+}
+document.getElementById('poAmount').addEventListener('input',updatePoPreview);
+document.getElementById('poCost').addEventListener('input',updatePoPreview);
+
+function doAddPosition(){
+var a=parseFloat(document.getElementById('poAmount').value);
+var c=parseFloat(document.getElementById('poCost').value);
+if(!a||!c)return toast('请填写数量和成本','error');
+var body=JSON.stringify({date:document.getElementById('poDate').value,time:document.getElementById('poTime').value,amount:a,cost_rmb:c,note:document.getElementById('poNote').value});
+api('/api/positions',{method:'POST',headers:{'Content-Type':'application/json'},body:body}).then(function(){toast('持仓已记录');loadPositions()}).catch(function(){});
+}
+
+function closePos(pid){
+if(!confirm('确定平仓？'))return;
+api('/api/positions/'+pid+'/close',{method:'POST'}).then(function(){toast('已平仓');loadPositions()}).catch(function(){});
 }
 
 // ========== Currency Price ==========

@@ -50,6 +50,8 @@ class ExcelDB:
                         "points_per_hour", "currency_per_point", "account_count",
                         "total_cost", "note", "created_at"],
         "currency_prices": ["id", "date", "time", "price", "note", "created_at"],
+        "mhxy_positions": ["id", "date", "time", "amount", "cost_rmb",
+                            "unit_cost", "note", "status", "created_at"],
     }
 
     def _ensure_file(self):
@@ -614,6 +616,54 @@ class ExcelDB:
             return trend[-1]["price_per_wan"]
         return 0
 
+    # ---------- 梦幻币持仓 ----------
+    def get_positions(self, status="active"):
+        rows = self._read_all("mhxy_positions")
+        result = []
+        for r in rows:
+            if status and r.get("status") != status: continue
+            r["id"] = int(r["id"] or 0)
+            r["amount"] = float(r["amount"] or 0)
+            r["cost_rmb"] = float(r["cost_rmb"] or 0)
+            r["unit_cost"] = float(r["unit_cost"] or 0)
+            result.append(r)
+        return result
+
+    def add_position(self, t_date, t_time, amount, cost_rmb, note=""):
+        pid = self._next_id("mhxy_positions")
+        unit_cost = round(cost_rmb / amount, 6) if amount > 0 else 0
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        self._append_row("mhxy_positions", [
+            pid, t_date, t_time, amount, cost_rmb, unit_cost, note, "active", now
+        ])
+        return pid
+
+    def close_position(self, pid):
+        self._update_cell("mhxy_positions", pid, 7, "closed")
+
+    def update_position(self, pid, data):
+        col_map = {"amount": 3, "cost_rmb": 4, "note": 6, "date": 1, "time": 2}
+        for key, col_idx in col_map.items():
+            if key in data:
+                self._update_cell("mhxy_positions", pid, col_idx, data[key])
+        # 重算 unit_cost
+        pos = next((p for p in self.get_positions(None) if p["id"] == pid), None)
+        if pos and pos["amount"] > 0:
+            new_uc = round(pos["cost_rmb"] / pos["amount"], 6)
+            self._update_cell("mhxy_positions", pid, 5, new_uc)
+
+    def get_position_summary(self):
+        positions = self.get_positions("active")
+        total_amount = sum(p["amount"] for p in positions)
+        total_cost = sum(p["cost_rmb"] for p in positions)
+        avg_cost = round(total_cost / total_amount, 6) if total_amount > 0 else 0
+        return {
+            "total_amount": total_amount,
+            "total_cost_rmb": total_cost,
+            "avg_unit_cost": avg_cost,
+            "count": len(positions),
+        }
+
     # ---------- 汇总 ----------
     def get_summary(self, month=None):
         """资产总览 + 利润表"""
@@ -1070,6 +1120,45 @@ def api_init_balance():
             diff
         )
     return jsonify({"ok": True, "balance": amount})
+
+# ---------- 梦幻币持仓 ----------
+@app.route("/api/positions")
+def api_positions():
+    return jsonify(db.get_positions(request.args.get("status") or "active"))
+
+@app.route("/api/positions/summary")
+def api_position_summary():
+    return jsonify(db.get_position_summary())
+
+@app.route("/api/positions", methods=["POST"])
+def api_add_position():
+    d = request.get_json()
+    amount = _float(d.get("amount"))
+    cost_rmb = _float(d.get("cost_rmb"))
+    if amount <= 0 or cost_rmb <= 0:
+        return jsonify({"error": "请填写数量和成本"}), 400
+    pid = db.add_position(
+        d.get("date", date.today().isoformat()),
+        d.get("time", datetime.now().strftime("%H:%M")),
+        amount, cost_rmb, d.get("note", "").strip()
+    )
+    return jsonify({"ok": True, "id": pid})
+
+@app.route("/api/positions/<int:pid>", methods=["PUT"])
+def api_update_position(pid):
+    d = request.get_json()
+    data = {}
+    for k in ["amount", "cost_rmb", "note", "date", "time"]:
+        if k in d:
+            data[k] = _float(d[k]) if k in ("amount", "cost_rmb") else d[k]
+    if data:
+        db.update_position(pid, data)
+    return jsonify({"ok": True})
+
+@app.route("/api/positions/<int:pid>/close", methods=["POST"])
+def api_close_position(pid):
+    db.close_position(pid)
+    return jsonify({"ok": True})
 
 # ---------- 配置 ----------
 @app.route("/api/config")
