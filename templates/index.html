@@ -382,7 +382,7 @@ try{var items=await api('/api/inventory')}catch(e){return}
 var total=items.reduce((s,i)=>s+i.total_cost,0);
 $('#invTotalCost').textContent=fm(total);
 if(!items.length){$('#inventoryTable').innerHTML='<div class="empty-state">📭 暂无库存</div>';return}
-$('#inventoryTable').innerHTML='<table class="table table-sm"><thead><tr><th>物品</th><th>数量</th><th>均价</th><th>总成本</th><th>市值</th><th>上次售价</th><th>预期利润</th><th>操作</th></tr></thead><tbody>'
+$('#inventoryTable').innerHTML='<table class="table table-sm"><thead><tr><th>物品</th><th>数量</th><th>均价</th><th>总成本</th><th>市值</th><th>上次售价</th><th>实时成本</th><th>预期利润</th><th>操作</th></tr></thead><tbody>'
 +items.map(i=>`<tr>
 <td><span class="editable" ondblclick="editInvCell(${i.id},'name','${i.name.replace(/'/g,"\\'")}')" title="双击编辑">${i.name}</span></td>
 <td><span class="editable" ondblclick="editInvCell(${i.id},'quantity',${i.quantity})" title="双击编辑">${i.quantity}</span></td>
@@ -390,7 +390,8 @@ $('#inventoryTable').innerHTML='<table class="table table-sm"><thead><tr><th>物
 <td>${fm(i.total_cost)}</td>
 <td><input type="number" class="form-control form-control-sm" style="width:80px;display:inline" value="${i.market_price||''}" placeholder="市值" onchange="updateMarket(${i.id},this.value)"></td>
 <td><span class="editable" ondblclick="editInvCell(${i.id},'last_sell_price',${i.last_sell_price||0})" title="双击编辑">${i.last_sell_price?fm(i.last_sell_price):'-'}</span></td>
-<td style="color:${(i.market_price||0)>i.avg_cost?'var(--green)':'#999'}">${i.market_price?fm((i.market_price-i.avg_cost)*i.quantity):'-'}</td>
+<td style="font-size:.78rem">${i.real_time_cost?fm(i.real_time_cost):'-'}</td>
+<td style="color:${(i.market_price||0)>(i.real_time_cost||i.avg_cost)?'var(--green)':'#999'}">${i.market_price&&(i.real_time_cost||i.avg_cost)?fm((i.market_price-(i.real_time_cost||i.avg_cost))*i.quantity):'-'}</td>
 <td><button class="btn btn-outline-sm" onclick="sellFromInventory(${i.id},'${i.name.replace(/'/g,"\\'")}',${i.quantity},${i.avg_cost},${i.last_sell_price||i.market_price||i.avg_cost})">卖出</button></td>
 </tr>`).join('')+'</tbody></table>';
 }

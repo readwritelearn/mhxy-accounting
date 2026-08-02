@@ -305,8 +305,46 @@ class ExcelDB:
             i["total_cost"] = float(i["total_cost"] or 0)
             i["market_price"] = float(i["market_price"] or 0)
             i["last_sell_price"] = float(i["last_sell_price"] or 0)
+            # 实时成本: 从交易记录反算
+            i["real_time_cost"] = self._calc_real_cost(i["name"])
             result.append(i)
         return result
+
+    def _calc_real_cost(self, product_name):
+        """从交易流水反算实时成本:
+           (总购入成本 - 已卖出结转成本) / 当前库存数量 """
+        import re
+        txns = self.get_transactions()
+        total_bought = 0
+        total_sold_cost = 0
+        total_sold_qty = 0
+        for t in txns:
+            desc = str(t.get("description", ""))
+            # 收货: "收货: name x{qty} @{cost}"
+            if t["category"] == "purchase_single":
+                m = re.search(r"收货: (.+?) x(\d+)", desc)
+                if m and m.group(1) == product_name:
+                    total_bought += abs(t["amount"])
+            # 卖出: "卖出: name x{qty} @{price} (成本@{cost})"
+            if t["category"] == "sale":
+                m = re.search(r"卖出: (.+?) x(\d+)", desc)
+                if m and m.group(1) == product_name:
+                    total_sold_qty += int(m.group(2))
+                    cost_m = re.search(r"成本@([\d,]+)", desc)
+                    if cost_m:
+                        total_sold_cost += float(cost_m.group(1).replace(",", ""))
+
+        # 剩余数量从库存取
+        inv = self._read_all("inventory")
+        curr_qty = 0
+        for i in inv:
+            if i.get("name") == product_name and i.get("status") == "active":
+                curr_qty += int(i["quantity"] or 0)
+
+        remaining_cost = total_bought - total_sold_cost
+        if curr_qty > 0 and remaining_cost > 0:
+            return round(remaining_cost / curr_qty, 0)
+        return 0
 
     def add_inventory(self, name, quantity, unit_cost):
         """添加库存（单件收货或批量拆分后入库）。
