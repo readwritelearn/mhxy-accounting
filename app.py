@@ -638,8 +638,28 @@ class ExcelDB:
         ])
         return pid
 
-    def close_position(self, pid):
+    def close_position(self, pid, sell_price_rmb=None):
+        """平仓：标记 closed。如果提供了卖出价，计算利润并记入主账本"""
         self._update_cell("mhxy_positions", pid, 7, "closed")
+        if sell_price_rmb is not None and sell_price_rmb > 0:
+            pos = next((p for p in self.get_positions(None) if p["id"] == pid), None)
+            if pos:
+                profit = round(sell_price_rmb - pos["cost_rmb"], 2)
+                # 将等值游戏币加入主账本
+                # 数量(万) × 10000 = 游戏币总量
+                game_amount = round(pos["amount"] * 10000, 0)
+                cfg = self.get_config()
+                ratio = float(cfg.get("currency_ratio", 100000))
+                # 按当前币价折算成游戏币: RMB卖出价 × 汇率
+                game_value = round(sell_price_rmb * ratio, 0)
+                self.add_transaction(
+                    pos["date"], "income", "random",
+                    f"平仓: {pos['amount']}万梦幻币 (成本¥{pos['cost_rmb']:.2f}, 卖出¥{sell_price_rmb:.2f}, 利润¥{profit:.2f})",
+                    game_value,
+                    profit=profit
+                )
+                return profit
+        return 0
 
     def update_position(self, pid, data):
         col_map = {"amount": 3, "cost_rmb": 4, "note": 6, "date": 1, "time": 2}
@@ -1157,8 +1177,10 @@ def api_update_position(pid):
 
 @app.route("/api/positions/<int:pid>/close", methods=["POST"])
 def api_close_position(pid):
-    db.close_position(pid)
-    return jsonify({"ok": True})
+    d = request.get_json() or {}
+    sell_price = _float(d.get("sell_price_rmb"), 0) if d.get("sell_price_rmb") else None
+    profit = db.close_position(pid, sell_price)
+    return jsonify({"ok": True, "profit": profit, "balance": db.get_balance()})
 
 # ---------- 配置 ----------
 @app.route("/api/config")
