@@ -311,33 +311,34 @@ class ExcelDB:
         return result
 
     def _calc_real_cost(self, product_name):
-        """从交易流水反算实时成本:
-           (总购入成本 - 实际出售总收入) / 剩余数量 """
+        """从库存当前成本 + 销售记录反推实时成本:
+           (原始总成本 - 出售总收入) / 剩余数量
+           原始总成本 = 当前库存成本 + 已卖出结转成本 """
         import re
         txns = self.get_transactions()
-        total_bought = 0
         total_sold_revenue = 0
+        total_sold_cost = 0
         for t in txns:
             desc = str(t.get("description", ""))
-            # 收货: "收货: name x{qty} @{cost}"
-            if t["category"] == "purchase_single":
-                m = re.search(r"收货: (.+?) x(\d+)", desc)
-                if m and m.group(1) == product_name:
-                    total_bought += abs(t["amount"])
-            # 卖出: "卖出: name x{qty} @{price} (成本@{cost})"
             if t["category"] == "sale":
                 m = re.search(r"卖出: (.+?) x(\d+)", desc)
                 if m and m.group(1) == product_name:
-                    total_sold_revenue += t["amount"]  # amount 为正 = 收入
+                    total_sold_revenue += t["amount"]
+                    cost_m = re.search(r"成本@([\d,]+)", desc)
+                    if cost_m:
+                        total_sold_cost += float(cost_m.group(1).replace(",", ""))
 
-        # 剩余数量从库存取
         inv = self._read_all("inventory")
         curr_qty = 0
+        curr_cost = 0
         for i in inv:
             if i.get("name") == product_name and i.get("status") == "active":
                 curr_qty += int(i["quantity"] or 0)
+                curr_cost += float(i["total_cost"] or 0)
 
-        remaining = total_bought - total_sold_revenue
+        # 原始总成本 = 当前库存总成本 + 已卖出结转成本
+        original_total_cost = curr_cost + total_sold_cost
+        remaining = original_total_cost - total_sold_revenue
         if curr_qty > 0:
             return round(remaining / curr_qty, 0)
         return 0
