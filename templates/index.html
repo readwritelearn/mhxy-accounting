@@ -356,7 +356,7 @@ body{background:var(--bg);color:var(--text);font-family:"Microsoft YaHei","PingF
 <script>
 // ========== 全局 ==========
 const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s);
-function fm(n){return Number(n||0).toLocaleString('zh-CN',{maximumFractionDigits:0})}
+function fm(n){var v=Number(n||0);var c='#aaa';if(Math.abs(v)>=1e8)c='#c39bdb';else if(Math.abs(v)>=1e7)c='#8e44ad';else if(Math.abs(v)>=1e6)c='#e74c3c';else if(Math.abs(v)>=1e5)c='#27ae60';return '<span style="color:'+c+'">'+v.toLocaleString('zh-CN',{maximumFractionDigits:0})+'</span>'}
 function td(){return new Date().toISOString().slice(0,10)}
 function toast(m,t){var d=document.createElement('div');d.className='toast align-items-center text-white border-0 show';d.style.cssText=`background:${t==='error'?'#e74c3c':'#27ae60'};margin-bottom:8px;min-width:200px;box-shadow:0 4px 12px rgba(0,0,0,0.2);border-radius:8px`;d.innerHTML=`<div class="d-flex"><div class="toast-body" style="font-size:.88rem">${m}</div><button class="btn-close btn-close-white me-2 m-auto" onclick="this.parentElement.parentElement.remove()"></button></div>`;$('#toastContainer').appendChild(d);setTimeout(()=>d.remove(),3500)}
 async function api(p,o){try{var r=await fetch(p,o);var d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`错误(${r.status})`);return d}catch(e){toast('❌ '+e.message,'error');throw e}}
@@ -374,11 +374,11 @@ async function loadDashboard(month){
 var u='/api/summary';if(month)u+='?month='+month;
 try{var d=await api(u)}catch(e){return}
 // Assets
-$('#astBalance').textContent=fm(d.assets.balance);
-$('#astInventory').textContent=fm(d.assets.inventory_cost);
-$('#astPool').textContent=fm(d.assets.pool_balance);
-$('#astPosition').textContent=fm(d.assets.position_value||0);
-$('#astTotal').textContent=fm(d.assets.total);
+$('#astBalance').innerHTML=fm(d.assets.balance);
+$('#astInventory').innerHTML=fm(d.assets.inventory_cost);
+$('#astPool').innerHTML=fm(d.assets.pool_balance);
+$('#astPosition').innerHTML=fm(d.assets.position_value||0);
+$('#astTotal').innerHTML=fm(d.assets.total);
 var w=$('#poolWarn');if(d.assets.open_batches>0){w.style.display='inline';w.textContent=d.assets.open_batches+'批待整理'}else w.style.display='none';
 var w2=$('#poolWarn2');if(d.assets.open_batches>0){w2.style.display='inline';w2.textContent='⚠ '+d.assets.open_batches+'个批次未完成'}else w2.style.display='none';
 
